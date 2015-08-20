@@ -4,3 +4,5 @@
 特别在两个团队分前后台开发的时候，把后台服务直接模拟出来，两个团队之间只进行API接口编程，这样开发效率也会有较好的提升。
 
 ##offlineserver的框架介绍
+###Third party lib
+1. [httprouter](http://godoc.org/github.com/julienschmidt/httprouter)
