@@ -4,5 +4,9 @@
 特别在两个团队分前后台开发的时候，把后台服务直接模拟出来，两个团队之间只进行API接口编程，这样开发效率也会有较好的提升。
 
 ##offlineserver的框架介绍
+1.	RESTFul资源服务器，作为离线使用需要完成正常的所有功能。
+2. 	自带存储，需要存储可能重复使用的信息。保证功能的完备性
+
 ###Third party lib
 1. [httprouter](http://godoc.org/github.com/julienschmidt/httprouter)
+2. [boltDB](http://godoc.org/github.com/boltdb/bolt)

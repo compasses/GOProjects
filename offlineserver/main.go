@@ -9,5 +9,5 @@ func main() {
 
 	router := ServerRouter()
 
-	log.Fatal(http.ListenAndServe(":10080", router))
+	log.Fatal(http.ListenAndServe(":8080", router))
 }

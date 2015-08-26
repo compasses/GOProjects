@@ -20,4 +20,16 @@ var routes = Routes{
 		"/sbo/service/EShopService@getATS",
 		ATS,
 	},
+	Route{
+		"Recommendation Products",
+		"POST",
+		"/sbo/service/ProductService@getRecommendationProductIds",
+		RecommandationProducts,
+	},
+	Route{
+		"Create Customer",
+		"POST",
+		"/sbo/service/CustomerService@createEShopCustomer",
+		CreateCustomer,
+	},
 }
