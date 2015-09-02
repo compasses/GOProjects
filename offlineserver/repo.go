@@ -1,28 +1,67 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
-	"math/rand"
-	//"os"
-	//"time"
-	//"encoding/binary"
-	"strconv"
-	//"encoding/json"
 	"github.com/boltdb/bolt"
 	"log"
+	"strconv"
 )
 
 var GlobalDB *bolt.DB
+
+//tables define
+const (
+	ProductTable                 = "PRODUCTS"
+	DefaultATS           TableId = 10
+	CustomerTable                = "CUSTOMER"
+	RecommandProductsNum         = 15
+)
+
+func GetProductATS(ProductId TableId) int64 {
+	var atsQua int64
+
+	GlobalDB.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(ProductTable))
+
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+
+		bb, errbb := b.CreateBucketIfNotExists(ProductId.ToBytes())
+
+		if errbb != nil {
+			HandleError(errbb)
+			return err
+		}
+
+		ats := bb.Get([]byte("ats"))
+		if ats == nil {
+			//new product id, need initialize the ats info
+			bb.Put([]byte("ats"), DefaultATS.ToBytes())
+			atsQua = int64(DefaultATS)
+		} else {
+			result := ToInt64FromBytes(ats)
+			if err != nil {
+				HandleError(err)
+				return err
+			}
+			atsQua = result
+		}
+		return nil
+	})
+	return atsQua
+}
 
 func RepoCreateATSRsp(req *ATSReq) []ATSRsp {
 	var rest []ATSRsp
 
 	for _, atsR := range req.SkuIds {
+
+		atsQua := GetProductATS(atsR)
 		rsp := ATSRsp{
 			SkuId:          atsR,
-			Ats:            10,
+			Ats:            atsQua,
 			AllowBackOrder: true,
 		}
 		rest = append(rest, rsp)
@@ -33,53 +72,61 @@ func RepoCreateATSRsp(req *ATSReq) []ATSRsp {
 	return rest
 }
 
-func RepoCreateRecommandationProducts(key []byte, Id int) []int {
-	var ProductId []int
+func RepoCreateRecommandationProducts(Id TableId) []TableId {
+	var ProductId []TableId
 
 	GlobalDB.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(key)
+		b, err := tx.CreateBucketIfNotExists([]byte(ProductTable))
 		if err != nil {
+			HandleError(err)
 			return err
 		}
 
-		all := b.Get([]byte("Products"))
-		if all != nil {
-			ProductId = getSliceIntFromBytes(all)
-		}
+		c := b.Cursor()
+		num := 0
 
-		if !containsIntSlice(ProductId, Id) {
-			ProductId = append(ProductId, Id)
+		for k, _ := c.First(); k != nil && (num < RecommandProductsNum); k, _ = c.Next() {
+			ProductId = append(ProductId, TableId(ToInt64FromBytes(k)))
+			num++
 		}
-
-		b.Put([]byte("Products"), getSliceBytesFromInts(ProductId))
 
 		return nil
 	})
 
 	return ProductId
 }
-func RepoCreateAccount(key []byte, customer CustomerCreate) CustomerCreateRsp {
+
+func RepoCreateAccount(customer CustomerCreate) CustomerCreateRsp {
 	var result CustomerCreateRsp
-	key = append(key, []byte("ACCOUNT")...)
+	key := []byte(CustomerTable)
 
 	GlobalDB.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(key)
+		pb, err := tx.CreateBucketIfNotExists(key)
+
 		if err != nil {
+			HandleError(err)
 			return err
 		}
-		user := b.Get([]byte(customer.Account))
 
+		customerId, _ := pb.NextSequence()
+
+		b, err := pb.CreateBucketIfNotExists([]byte(customer.Account))
+
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+
+		user := b.Get([]byte("User"))
 		if user == nil {
 			//create new user
-			customer.AccountInfo.CustomerID = (tx.Size() * rand.Int63()) % 997
-			customer.AccountInfo.CustomerCode = "offline" + strconv.FormatInt(customer.AccountInfo.CustomerID, 10)
-			customer.AccountInfo.ChannelAccountID = customer.ChannelId * customer.AccountInfo.CustomerID
+			customer.AccountInfo.CustomerID = TableId(customerId)
+			customer.AccountInfo.CustomerCode = "offline" + strconv.FormatInt(customer.AccountInfo.CustomerID.ToInt(), 10)
+			customer.AccountInfo.ChannelAccountID = TableId(customer.ChannelId * customer.AccountInfo.CustomerID)
 			cusStream, _ := json.Marshal(&customer)
-			b.Put([]byte(customer.Account), cusStream)
+			b.Put([]byte("User"), cusStream)
 			//use Id to get account
-			buf := new(bytes.Buffer)
-			binary.Write(buf, binary.LittleEndian, customer.AccountInfo.CustomerID)
-			b.Put(buf.Bytes(), []byte(customer.Account))
+			pb.Put(customer.AccountInfo.CustomerID.ToBytes(), []byte(customer.Account))
 			result = customer.AccountInfo
 		}
 
@@ -87,53 +134,145 @@ func RepoCreateAccount(key []byte, customer CustomerCreate) CustomerCreateRsp {
 		result = customer.AccountInfo
 		return nil
 	})
+
 	return result
 }
 
-func encode(v int) []byte {
-	var result []byte
-	result = strconv.AppendInt(result, int64(v), 10)
-	return result
-}
+func RepoCreateAddress(customer *CustomerAddress) (result interface{}) {
+	key := []byte(CustomerTable)
 
-func getSliceIntFromBytes(input []byte) []int {
-	sizeofInt := 4
-	data := make([]int, len(input)/sizeofInt) // int used 4 bytes
-	for i := range data {
-		num, _ := binary.Varint(input[i*sizeofInt : (i+1)*sizeofInt])
-		data[i] = int(num)
-	}
-	return data
-}
+	GlobalDB.Update(func(tx *bolt.Tx) error {
+		pb, err := tx.CreateBucketIfNotExists(key)
 
-func getSliceBytesFromInts(input []int) []byte {
-	result := make([]byte, len(input)*4)
-	for i := range input {
-		binary.PutVarint(result[i*4:], int64(input[i]))
-	}
-	return result
-}
-
-func containsIntSlice(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
+		if err != nil {
+			HandleError(err)
+			return err
 		}
-	}
-	return false
+
+		account := pb.Get(customer.CustomerInfo.Id.ToBytes())
+		if account == nil {
+			result = "not found this user:" + customer.CustomerInfo.Id.ToString()
+			return nil
+		} else {
+			customerBucket := pb.Bucket(account)
+			if customerBucket == nil {
+				result = "not found this account:" + string(account)
+				return nil
+			}
+			//create the bucket for store address info
+			addressBucket, _ := customerBucket.CreateBucketIfNotExists([]byte("addresses"))
+			addressId, _ := addressBucket.NextSequence()
+			customer.Id = TableId(addressId)
+
+			streamD, _ := json.Marshal(customer)
+			addressBucket.Put(TableId(addressId).ToBytes(), streamD)
+			result = customer
+		}
+
+		return nil
+	})
+	return
 }
+
+func RepoUpdateAddress(addressId TableId, customer *CustomerAddress) (result interface{}){
+	key := []byte(CustomerTable)
+	
+	GlobalDB.Update(func(tx *bolt.Tx) error{
+		pb, err := tx.CreateBucketIfNotExists(key)
+
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+		account := pb.Get(customer.CustomerInfo.Id.ToBytes())
+		if account == nil {
+			result = "not found this user:" + customer.CustomerInfo.Id.ToString()
+			return nil
+		} else {
+			customerBucket := pb.Bucket(account)
+			if customerBucket == nil {
+				result = "not found this account:" + string(account)
+				return nil
+			}
+			
+			//create the bucket for store address info
+			addressBucket, _ := customerBucket.CreateBucketIfNotExists([]byte("addresses"))
+			oldAddress := addressBucket.Get(addressId.ToBytes())
+			var oldCustomerAddr  CustomerAddress
+			json.Unmarshal(oldAddress, &oldCustomerAddr)
+			
+			//set to new one
+			oldCustomerAddr.AddressInfo = customer.AddressInfo			
+			streamD, _ := json.Marshal(oldCustomerAddr)
+			
+			addressBucket.Put(TableId(addressId).ToBytes(), streamD)
+			result = oldCustomerAddr
+		}
+		return nil
+	})
+	return 
+}
+
+func RepoGetCustomerAddress(customerId TableId) (result []interface{}) {
+	key := []byte(CustomerTable)
+
+	GlobalDB.Update(func(tx *bolt.Tx) error{
+		pb, err := tx.CreateBucketIfNotExists(key)
+
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+		account := pb.Get(customerId.ToBytes())
+		if account == nil {
+			result = append(result, "not found this user:" + customerId.ToString())
+			return nil
+		} else {
+			customerBucket := pb.Bucket(account)
+			if customerBucket == nil {
+				result = append(result, "not found this account:" + string(account))
+				return nil
+			}
+			
+			countinfo := make(map[string]int64)
+			var count int64 = 0
+			
+			//create the bucket for store address info
+			addressBucket := customerBucket.Bucket([]byte("addresses"))
+			if addressBucket == nil {
+				countinfo["count"] = 0
+				result = append(result, countinfo)
+			} else {
+				bos := make(map[string][]interface{})
+				cur := addressBucket.Cursor()		
+			    for k, v := cur.First(); k != nil; k, v = cur.Next() {
+					count++
+					var Addr  CustomerAddress
+					json.Unmarshal(v, &Addr)
+					bos["bos"] = append(bos["bos"], Addr)
+			    }
+				countinfo["count"] = count
+				result = append(result, countinfo)
+				result = append(result, bos)
+			}
+		}
+		return nil
+	})
+	return
+}
+
 
 func init() {
 	GlobalDB, _ = bolt.Open("./EshopOfflineServerDB", 0666, nil)
-//	go func() {
-//		prev := GlobalDB.Stats()
-//		for {
-//			time.Sleep(10 * time.Second)
+	//	go func() {
+	//		prev := GlobalDB.Stats()
+	//		for {
+	//			time.Sleep(10 * time.Second)
 
-//			states := GlobalDB.Stats()
-//			diff := states.Sub(&prev)
-//			//json.NewEncoder(os.Stderr).Encode(diff)
-//			prev = states
-//		}
-//	}()
+	//			states := GlobalDB.Stats()
+	//			diff := states.Sub(&prev)
+	//			//json.NewEncoder(os.Stderr).Encode(diff)
+	//			prev = states
+	//		}
+	//	}()
 }

@@ -2,13 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	_ "strconv"
 	"strings"
 )
 
@@ -16,24 +13,21 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(404)
 	r.ParseForm() //解析参数，默认是不会解析的
 
-	fmt.Println(net.ParseIP(strings.Split(r.RemoteAddr, ":")[0]))
-
-	all, _ := ioutil.ReadAll(r.Body)
+	log.Println(net.ParseIP(strings.Split(r.RemoteAddr, ":")[0]))
+	dec := json.NewDecoder(r.Body)
 	var result interface{}
-	json.Unmarshal(all, &result)
-	fmt.Println("Req:", result)
+	dec.Decode(&result)
+	log.Println("Req:", result)
 }
 
 func ATS(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
-
-	body, _ := ioutil.ReadAll(r.Body)
-
+	dec := json.NewDecoder(r.Body)
 	var checkInfo ATSReq
-	err := json.Unmarshal(body, &checkInfo)
+	err := dec.Decode(&checkInfo)
 
 	if err != nil {
-		fmt.Println("err :", err)
+		HandleError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -51,21 +45,18 @@ func ATS(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 func RecommandationProducts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
-	body, _ := ioutil.ReadAll(r.Body)
-
+	dec := json.NewDecoder(r.Body)
 	var id RecommandInfo
-	err := json.Unmarshal(body, &id)
+	err := dec.Decode(&id)
 
 	if err != nil {
-		fmt.Println("err :", err)
+		HandleError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	log.Printf("RecommandProducts Req%+v\n", id)
 
-	key := net.ParseIP(strings.Split(r.RemoteAddr, ":")[0])
-
-	RecommandIds := RepoCreateRecommandationProducts(key, id.ProductId)
+	RecommandIds := RepoCreateRecommandationProducts(id.ProductId)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	w.WriteHeader(http.StatusOK)
@@ -78,24 +69,79 @@ func RecommandationProducts(w http.ResponseWriter, r *http.Request, ps httproute
 
 func CreateCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
-	body, _ := ioutil.ReadAll(r.Body)
 	var customer CustomerCreate
-	err := json.Unmarshal(body, &customer)
+	dec := json.NewDecoder(r.Body)
+
+	err := dec.Decode(&customer)
 
 	if err != nil {
-		fmt.Println("err :", err)
+		HandleError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	log.Printf("Customer Create Req%+v\n", customer)
 
-	key := net.ParseIP(strings.Split(r.RemoteAddr, ":")[0])
-
-	Account := RepoCreateAccount(key, customer)
+	Account := RepoCreateAccount(customer)
 
 	if err := json.NewEncoder(w).Encode(Account); err != nil {
 		panic(err)
 	}
 	log.Printf("Customer Create Rsp%+v\n", Account)
+}
+
+func CustomerAddressNew(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.ParseForm()
+	dec := json.NewDecoder(r.Body)
+
+	var addInfo CustomerAddress
+	err := dec.Decode(&addInfo)
+
+	if err != nil {
+		HandleError(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	Rs := RepoCreateAddress(&addInfo)
+
+	if err = json.NewEncoder(w).Encode(Rs); err != nil {
+		panic(err)
+	}
+
+	log.Printf("Create address info %+v\n", addInfo)
+
+}
+
+func CustomerAddressUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	r.ParseForm()
+	addressId := GetIdFromStr(ps.ByName("id"))
+	
+	dec := json.NewDecoder(r.Body)
+
+	var addInfo CustomerAddress
+	err := dec.Decode(&addInfo)
+
+	if err != nil {
+		HandleError(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	
+	Rs := RepoUpdateAddress(addressId, &addInfo)
+
+	if err = json.NewEncoder(w).Encode(Rs); err != nil {
+		panic(err)
+	}
+}
+
+func GetCustomerAddress(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.ParseForm()
+	
+	customerId := GetIdFromStr(r.Form["$filter"][0])
+	Rs := RepoGetCustomerAddress(customerId)
+	
+	if err := json.NewEncoder(w).Encode(Rs); err != nil {
+		panic(err)
+	}
 }

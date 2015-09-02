@@ -32,4 +32,22 @@ var routes = Routes{
 		"/sbo/service/CustomerService@createEShopCustomer",
 		CreateCustomer,
 	},
+	Route{
+		"Address New",
+		"POST",
+		"/sbo/service/CustomerAddressNew",
+		CustomerAddressNew,
+	},
+	Route{
+		"Address Update",
+		"PUT",
+		"/sbo/service/:id/",
+		CustomerAddressUpdate,
+	},
+	Route{
+		"Address Retrieve",
+		"GET",
+		"/sbo/service/CustomerAddressNew/",
+		GetCustomerAddress,
+	},
 }
