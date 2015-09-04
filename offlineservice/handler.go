@@ -116,7 +116,7 @@ func CustomerAddressNew(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 func CustomerAddressUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
 	addressId := GetIdFromStr(ps.ByName("id"))
-	
+
 	dec := json.NewDecoder(r.Body)
 
 	var addInfo CustomerAddress
@@ -127,7 +127,7 @@ func CustomerAddressUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	
+
 	Rs := RepoUpdateAddress(addressId, &addInfo)
 
 	if err = json.NewEncoder(w).Encode(Rs); err != nil {
@@ -137,11 +137,46 @@ func CustomerAddressUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 
 func GetCustomerAddress(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
-	
+
 	customerId := GetIdFromStr(r.Form["$filter"][0])
 	Rs := RepoGetCustomerAddress(customerId)
-	
+
 	if err := json.NewEncoder(w).Encode(Rs); err != nil {
 		panic(err)
 	}
 }
+func MiscCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.ParseForm()
+	dec := json.NewDecoder(r.Body)
+
+	var checkParam map[string]interface{}
+	err := dec.Decode(&checkParam)
+
+	if err != nil {
+		HandleError(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	
+	log.Println("misc check parames ", checkParam)
+	Rs := RetrieveByMapLevel(checkParam, []string{"miscParam", "lines"})
+	lines := Rs.([]interface{})
+	
+	resp := make(map[string][]interface{})
+	for _, val := range lines {
+		valm := val.(map[string]interface{})
+		resp["lineResult"] = append(resp["lineResult"], map[string]interface{}{
+			"onChannel":"true",
+			"ats":10,
+			"allowBackOrder":"true",
+			"skuId":valm["skuId"],
+		})
+	}
+
+	log.Println("resp ", resp)
+	
+	if err = json.NewEncoder(w).Encode(resp); err != nil {
+		panic(err)
+	}
+}
+

@@ -50,4 +50,10 @@ var routes = Routes{
 		"/sbo/service/CustomerAddressNew/",
 		GetCustomerAddress,
 	},
+	Route{
+		"MiscCheck",
+		"POST",
+		"/sbo/service/EShopService@miscCheck",
+		MiscCheck,
+	},
 }

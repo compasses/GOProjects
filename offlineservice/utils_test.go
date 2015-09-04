@@ -1,10 +1,10 @@
 package main
 
 import (
-	"regexp"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"regexp"
 	"strconv"
 	"testing"
 )
@@ -58,6 +58,6 @@ func TestGetIntFromStr(t *testing.T) {
 	ni = append(ni, "ok")
 	ni = append(ni, 2323)
 	ni = append(ni, cc)
-	
+
 	fmt.Println("interfaces values ", ni)
 }

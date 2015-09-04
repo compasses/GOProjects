@@ -1,10 +1,10 @@
 package main
 
 import (
-	"regexp"
 	"bytes"
 	"encoding/binary"
 	"log"
+	"regexp"
 	"runtime"
 	"strconv"
 )
@@ -71,6 +71,47 @@ func GetIdFromStr(input string) TableId {
 	valId := regexp.MustCompile(`(\d+)`)
 	val, _ := strconv.Atoi(valId.FindString(input))
 	return TableId(val)
+}
+
+func RetrieveByMapLevel(f interface{}, levels []string) interface{} {
+	length := len(levels)
+
+	if length <= 0 {
+		return f
+	}
+
+	result := f.(map[string]interface{})
+
+	for k, v := range result {
+		if k == levels[0] {
+			return RetrieveByMapLevel(v.(interface{}), levels[1:])
+		}
+	}
+
+	return result
+}
+
+func HandleDecodeData(f map[string]interface{}) {
+	for k, v := range f {
+		log.Println("key", k)
+		switch vv := v.(type) {
+		//		case string:
+		//			log.Println(k, "is string", vv)
+		//		case int:
+		//			log.Println(k, "is int", vv)
+		//		case []interface{}:
+		//			log.Println(k, "is an array:")
+		//			for i, u := range vv {
+		//				log.Println(i, u)
+		//			}
+		//		case interface{}:
+		//			log.Println(k, "is an interface")
+		//			HandleDecodeData(f[k].(map[string]interface{}))
+		default:
+			log.Println(vv)
+			log.Println(k, "is of a type I don't know how to handle")
+		}
+	}
 }
 
 func HandleError(err error) {

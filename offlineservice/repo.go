@@ -12,6 +12,7 @@ var GlobalDB *bolt.DB
 //tables define
 const (
 	ProductTable                 = "PRODUCTS"
+	SKUTable                     = "PRODUCT-SKU"
 	DefaultATS           TableId = 10
 	CustomerTable                = "CUSTOMER"
 	RecommandProductsNum         = 15
@@ -21,7 +22,7 @@ func GetProductATS(ProductId TableId) int64 {
 	var atsQua int64
 
 	GlobalDB.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(ProductTable))
+		b, err := tx.CreateBucketIfNotExists([]byte(SKUTable))
 
 		if err != nil {
 			HandleError(err)
@@ -88,6 +89,12 @@ func RepoCreateRecommandationProducts(Id TableId) []TableId {
 		for k, _ := c.First(); k != nil && (num < RecommandProductsNum); k, _ = c.Next() {
 			ProductId = append(ProductId, TableId(ToInt64FromBytes(k)))
 			num++
+		}
+		_, errbb := b.CreateBucketIfNotExists(Id.ToBytes())
+
+		if errbb != nil {
+			HandleError(errbb)
+			return err
 		}
 
 		return nil
@@ -174,10 +181,10 @@ func RepoCreateAddress(customer *CustomerAddress) (result interface{}) {
 	return
 }
 
-func RepoUpdateAddress(addressId TableId, customer *CustomerAddress) (result interface{}){
+func RepoUpdateAddress(addressId TableId, customer *CustomerAddress) (result interface{}) {
 	key := []byte(CustomerTable)
-	
-	GlobalDB.Update(func(tx *bolt.Tx) error{
+
+	GlobalDB.Update(func(tx *bolt.Tx) error {
 		pb, err := tx.CreateBucketIfNotExists(key)
 
 		if err != nil {
@@ -194,29 +201,29 @@ func RepoUpdateAddress(addressId TableId, customer *CustomerAddress) (result int
 				result = "not found this account:" + string(account)
 				return nil
 			}
-			
+
 			//create the bucket for store address info
 			addressBucket, _ := customerBucket.CreateBucketIfNotExists([]byte("addresses"))
 			oldAddress := addressBucket.Get(addressId.ToBytes())
-			var oldCustomerAddr  CustomerAddress
+			var oldCustomerAddr CustomerAddress
 			json.Unmarshal(oldAddress, &oldCustomerAddr)
-			
+
 			//set to new one
-			oldCustomerAddr.AddressInfo = customer.AddressInfo			
+			oldCustomerAddr.AddressInfo = customer.AddressInfo
 			streamD, _ := json.Marshal(oldCustomerAddr)
-			
+
 			addressBucket.Put(TableId(addressId).ToBytes(), streamD)
 			result = oldCustomerAddr
 		}
 		return nil
 	})
-	return 
+	return
 }
 
-func RepoGetCustomerAddress(customerId TableId) (result []interface{}) {
+func RepoGetCustomerAddress(customerId TableId) (result interface{}) {
 	key := []byte(CustomerTable)
 
-	GlobalDB.Update(func(tx *bolt.Tx) error{
+	GlobalDB.Update(func(tx *bolt.Tx) error {
 		pb, err := tx.CreateBucketIfNotExists(key)
 
 		if err != nil {
@@ -225,42 +232,42 @@ func RepoGetCustomerAddress(customerId TableId) (result []interface{}) {
 		}
 		account := pb.Get(customerId.ToBytes())
 		if account == nil {
-			result = append(result, "not found this user:" + customerId.ToString())
+			result = "not found this user:" + customerId.ToString()
 			return nil
 		} else {
 			customerBucket := pb.Bucket(account)
 			if customerBucket == nil {
-				result = append(result, "not found this account:" + string(account))
+				result = "not found this account:" + string(account)
 				return nil
 			}
-			
-			countinfo := make(map[string]int64)
+
+			countinfo := make(map[string]interface{})
 			var count int64 = 0
-			
+
 			//create the bucket for store address info
 			addressBucket := customerBucket.Bucket([]byte("addresses"))
 			if addressBucket == nil {
-				countinfo["count"] = 0
-				result = append(result, countinfo)
+				countinfo["odata.count"] = 0
+				result = countinfo
 			} else {
 				bos := make(map[string][]interface{})
-				cur := addressBucket.Cursor()		
-			    for k, v := cur.First(); k != nil; k, v = cur.Next() {
+				cur := addressBucket.Cursor()
+				for k, v := cur.First(); k != nil; k, v = cur.Next() {
 					count++
-					var Addr  CustomerAddress
+					var Addr CustomerAddress
 					json.Unmarshal(v, &Addr)
 					bos["bos"] = append(bos["bos"], Addr)
-			    }
-				countinfo["count"] = count
-				result = append(result, countinfo)
-				result = append(result, bos)
+				}
+
+				countinfo["odata.count"] = count
+				countinfo["value"] = bos
+				result = countinfo
 			}
 		}
 		return nil
 	})
 	return
 }
-
 
 func init() {
 	GlobalDB, _ = bolt.Open("./EshopOfflineServerDB", 0666, nil)
