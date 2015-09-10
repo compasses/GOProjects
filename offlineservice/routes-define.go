@@ -56,4 +56,22 @@ var routes = Routes{
 		"/sbo/service/EShopService@miscCheck",
 		MiscCheck,
 	},
+	Route{
+		"Checkout",
+		"POST",
+		"/sbo/service/EShopService@checkoutShoppingCart",
+		Checkout,
+	},
+	Route{
+		"PlaceOrder",
+		"POST",
+		"/sbo/service/EShopService@placeOrder",
+		PlaceOrder,
+	},
+	Route{
+		"GetSalesOrder",
+		"POST",
+		"/sbo/service/EShopService@getSalesOrder",
+		GetSalesOrder,
+	},
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"bytes"
 	"encoding/binary"
+	"github.com/franela/goreq"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -60,4 +62,19 @@ func TestGetIntFromStr(t *testing.T) {
 	ni = append(ni, cc)
 
 	fmt.Println("interfaces values ", ni)
+}
+
+func TestHttpGet(t *testing.T) {
+	res, _ := goreq.Request{
+	Method:      "GET",
+	Uri:         "http://cnpvgvb1ep016.pvgl.sap.corp:2377/v2/keys/config/serviceunit/1/virtualservice/NESHOP23/info",
+	ShowDebug:   true,
+	}.Do()
+	
+	dec := json.NewDecoder(res.Response.Body)
+	var result interface{}
+	dec.Decode(&result)
+	
+	//fmt.Println("Result ", res.Response)
+	fmt.Println("resp result ", result)
 }

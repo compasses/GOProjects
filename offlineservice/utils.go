@@ -13,6 +13,28 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+func GetAddressObj(addr interface{}) map[string]interface{} {
+	old := addr.(map[string]interface{})
+
+	var result = map[string]interface{}{
+		"recipientName": old["userName"],
+		"cityName":      old["customCity"],
+		"stateId":       old["state"],
+		"countryId":     old["country"],
+		"street1":       old["address1"],
+		"street2":       old["address2"],
+		"zipCode":       old["zipCode"],
+		"mobile":        old["phone"],
+		"state":         old["customState"],
+	}
+
+	return result
+}
+
+func ToInt64FromString(input string) int64 {
+	re, _ := strconv.ParseInt(input, 10, 8)
+	return re
+}
 func GetSliceIntFromBytes(input []byte) []TableId {
 	sizeofInt := 8
 	data := make([]TableId, len(input)/sizeofInt)

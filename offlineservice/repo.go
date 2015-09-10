@@ -15,8 +15,51 @@ const (
 	SKUTable                     = "PRODUCT-SKU"
 	DefaultATS           TableId = 10
 	CustomerTable                = "CUSTOMER"
+	OrderTable                   = "ORDERS"
 	RecommandProductsNum         = 15
 )
+
+func RepoGetSalesOrder(orderId TableId) (result interface{}) {
+
+	GlobalDB.Update(func(tx *bolt.Tx) error {
+		orderBucket, err := tx.CreateBucketIfNotExists([]byte(OrderTable))
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+
+		orderBytes := orderBucket.Get(orderId.ToBytes())
+		json.Unmarshal(orderBytes, &result)
+
+		return nil
+	})
+	return
+}
+
+func RepoCreateOrder(order interface{}) map[string]interface{} {
+	var newOrder map[string]interface{}
+
+	GlobalDB.Update(func(tx *bolt.Tx) error {
+		orderBucket, err := tx.CreateBucketIfNotExists([]byte(OrderTable))
+		if err != nil {
+			HandleError(err)
+			return err
+		}
+		newOrder = order.(map[string]interface{})
+
+		newId, _ := orderBucket.NextSequence()
+		newOrder["id"] = TableId(newId)
+		newOrder["billingAddr"] = GetAddressObj(newOrder["billingAddress"])
+		newOrder["shippingAddr"] = GetAddressObj(newOrder["shippingAddress"])
+
+		orderBytes, _ := json.Marshal(order)
+		orderBucket.Put(TableId(newId).ToBytes(), orderBytes)
+
+		return nil
+	})
+
+	return newOrder
+}
 
 func GetProductATS(ProductId TableId) int64 {
 	var atsQua int64
@@ -250,13 +293,13 @@ func RepoGetCustomerAddress(customerId TableId) (result interface{}) {
 				countinfo["odata.count"] = 0
 				result = countinfo
 			} else {
-				bos := make(map[string][]interface{})
+				var bos []interface{}
 				cur := addressBucket.Cursor()
 				for k, v := cur.First(); k != nil; k, v = cur.Next() {
 					count++
 					var Addr CustomerAddress
 					json.Unmarshal(v, &Addr)
-					bos["bos"] = append(bos["bos"], Addr)
+					bos = append(bos, Addr)
 				}
 
 				countinfo["odata.count"] = count
