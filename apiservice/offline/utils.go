@@ -1,4 +1,4 @@
-package main
+package offline
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 )
+
 
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)

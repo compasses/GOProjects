@@ -1,4 +1,4 @@
-package main_test
+package offline_test
 
 import (
 	"encoding/binary"

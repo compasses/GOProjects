@@ -1,4 +1,4 @@
-package main
+package offline
 
 import (
 	"github.com/julienschmidt/httprouter"

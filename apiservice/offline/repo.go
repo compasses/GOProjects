@@ -1,4 +1,4 @@
-package main
+package offline
 
 import (
 	"encoding/json"
