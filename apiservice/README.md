@@ -22,7 +22,7 @@ online时，会让其链接真正的service，但是要起到debug的作用。�
 4. LogFile, 日志文件名字。
 
 ##总体结构图：
-![architecture](./architecture.png)
+![architecture](./architecture.PNG)
 
 
 ###Third party lib
