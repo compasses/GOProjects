@@ -1,51 +1,87 @@
 package main
 
 import (
+	"time"
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"github.com/Compasses/Projects-of-GO/apiservice/offline"
+	"github.com/Compasses/Projects-of-GO/apiservice/online"
 	"log"
 	"net/http"
-	"time"
-	"github.com/Compasses/Projects-of-GO/apiservice/offline"
 )
 
-
+type config struct {
+	RunMode      int
+	RemoteServer string
+	ListenOn     string
+	LogFile		 string
+}
 
 var GlobalServerStatus int64 = 0
-type ServerSwitch map[string]http.Handler
+var localServer string = "localhost:8080"
+var GlobalConfig config
 
-// Implement the ServerHTTP method on our new type
-func (sw ServerSwitch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//ChangeGlobalStatus()
-	if GlobalServerStatus == 0 { //offline
-		sw["offline"].ServeHTTP(w, r)
-		log.Println("server run in offline!")
+func GetConfiguration() (conf config, useDefault bool) {
+	//get configuration
+	file, err := os.Open("./config.json")
+	if err != nil {
+		log.Println("read file failed...", err)
+		log.Println("Just run in offline mode")
+		useDefault = true
 	} else {
-		http.Redirect(w, r, "http://10.128.163.72:8080", 302)
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Println("read file failed...", err)
+			log.Println("Just run in offline mode")
+			useDefault = true
+		} else {
+			json.Unmarshal([]byte(string(data)), &conf)
+			log.Println("get configuration:", conf)
+		}
 	}
+	GlobalConfig = conf
+	return
 }
 
-func ChangeGlobalStatus() {
-	if GlobalServerStatus == 0 {
-		GlobalServerStatus = 1
+func init() {
+	
+}
+
+func RunDefaultServer(local string, handler http.Handler) {
+	log.Println("Listen ON: ", local)
+	//log.Fatal(http.ListenAndServe(local, handler))	
+	log.Fatal(http.ListenAndServeTLS(local, "cert.pem", "key.pem", handler))
+}
+
+func main() {	
+	conf, useDefault := GetConfiguration()
+
+	f, err := os.OpenFile(GlobalConfig.LogFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+	    log.Fatal("error opening file: %v", err)
+	}
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile| log.Lmicroseconds)
+	log.SetOutput(f)
+	log.Println("Begin API LOG------------------------")
+
+	if useDefault {
+		router := offline.ServerRouter()
+		RunDefaultServer(localServer, router)
 	} else {
-		GlobalServerStatus = 0
+		if conf.RunMode == 0 {
+			router := offline.ServerRouter()
+			RunDefaultServer(conf.ListenOn, router)
+		} else {
+			proxy := online.NewProxyHandler(conf.RemoteServer)
+			RunDefaultServer(conf.ListenOn, proxy)
+		}
 	}
-}
 
-func PrintStatus() {
-	for {
-		log.Println("status", GlobalServerStatus)
-		time.Sleep(time.Millisecond * 1000)
-	}
-}
-
-func main() {
-
-	sw := make(ServerSwitch)
-
-	router := offline.ServerRouter()
-
-	sw["offline"] = router
-	//go PrintStatus()
-
-	log.Fatal(http.ListenAndServe(":8080", sw))
+	go (func(f *os.File){
+		f.Sync()
+		time.Sleep(time.Second)
+	})(f)
+	
 }

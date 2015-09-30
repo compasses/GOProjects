@@ -1,0 +1,6 @@
+{
+	"RunMode":1,
+	"RemoteServer":"https://cnpvgvb1ep134.pvgl.sap.corp:49191",
+	"ListenOn":"0.0.0.0:8080",
+	"LogFile":"api_log"
+}

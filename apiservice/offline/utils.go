@@ -9,11 +9,6 @@ import (
 	"strconv"
 )
 
-
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
 func GetAddressObj(addr interface{}) map[string]interface{} {
 	old := addr.(map[string]interface{})
 

@@ -1,4 +1,5 @@
 package offline
+
 type TableId int64
 
 type ATSReq struct {

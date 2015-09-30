@@ -302,7 +302,7 @@ func RepoGetCustomerAddress(customerId TableId) (result interface{}) {
 					bos = append(bos, Addr)
 				}
 
-				countinfo["odata.count"] = count
+				countinfo["odata.count"] = 150
 				countinfo["value"] = bos
 				result = countinfo
 			}

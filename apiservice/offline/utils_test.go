@@ -1,4 +1,4 @@
-package offline_test
+package offline
 
 import (
 	"bytes"
