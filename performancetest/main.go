@@ -16,10 +16,17 @@ type RequestStats struct {
 	ErrorStatusCode []int64
 }
 
+type Requests struct {
+	URL string
+	Method string
+	Body string
+	Header map[string]string
+}
+
 type Config struct {
-	ThreadNum []int64
-	URLs      []string
 	Duration  int64
+	ThreadNum []int64
+	TestRequest      []Requests
 }
 
 func main() {

@@ -1,8 +1,24 @@
 {
+	"Duration":3600,
 	"ThreadNum":[160, 80],
-	"URLs":[
-		"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
-		"http://10.128.161.107/occ-eshop/collections/all?orderby=2"
-	],
-	"Duration":3600
+	"TestRequest":[
+		{
+			"URL":"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
+			"Method":"GET",
+			"Body":"",
+			"Header":{
+				"tid":"1",
+				"token":"1122"
+			}			
+		},
+		{
+			"URL":"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
+			"Method":"POST",
+			"Body":"",
+			"Header":{
+				"tid":"1",
+				"token":"1122"
+			}			
+		}
+	]
 }
