@@ -220,6 +220,7 @@ func MiscCheck(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			"ats":            10,
 			"allowBackOrder": "true",
 			"skuId":          valm["skuId"],
+			"valid":          "true",
 		})
 	}
 

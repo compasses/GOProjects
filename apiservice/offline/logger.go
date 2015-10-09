@@ -20,7 +20,6 @@ func Logger(inner httprouter.Handle, name string) httprouter.Handle {
 			name,
 			time.Since(start),
 		)
-
 	})
 }
 

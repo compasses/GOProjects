@@ -14,17 +14,17 @@ func qsort(values []int, low, high int) {
 
 func qsortpartition(values []int, low, high int) int {
 	piv := values[low]
-    for low < high {
-        for low < high && values[high] >= piv {
-        	high--	
-    	}
-        values[low] = values[high]
+	for low < high {
+		for low < high && values[high] >= piv {
+			high--
+		}
+		values[low] = values[high]
 
-        for low < high && values[low] <= piv {
-        	low	++
-    	}
-        values[high] = values[low]            
-    }
-    values[low] = piv
-    return low
+		for low < high && values[low] <= piv {
+			low++
+		}
+		values[high] = values[low]
+	}
+	values[low] = piv
+	return low
 }

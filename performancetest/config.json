@@ -1,0 +1,8 @@
+{
+	"ThreadNum":[160, 80],
+	"URLs":[
+		"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
+		"http://10.128.161.107/occ-eshop/collections/all?orderby=2"
+	],
+	"Duration":3600
+}

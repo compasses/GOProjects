@@ -1,13 +1,13 @@
 package main
 
 import "fmt"
+
 //import "sort"
 type ByteSlice []byte
 type Sequence []int
 
-
 func main() {
-	myslice1 := ByteSlice {'a', 'b', 'c'}
+	myslice1 := ByteSlice{'a', 'b', 'c'}
 	myslice2 := make([]byte, 5)
 	myslice3 := make([]byte, 5, 10)
 
@@ -24,15 +24,14 @@ func main() {
 
 	outPutSlice(testSlice)
 
-	mysq1 := Sequence{3, 5, 6, 7,8,8,9,9,6,543}
+	mysq1 := Sequence{3, 5, 6, 7, 8, 8, 9, 9, 6, 543}
 	fmt.Println("content of sq1 = ", mysq1)
 }
 
-
 func outPutSlice(slice []byte) {
 	fmt.Printf("info of slice: len = %d, cap = %d\n", len(slice), cap(slice))
-	for i, v := range slice{
-		fmt.Println("slice [" , i , "] = ", v)
+	for i, v := range slice {
+		fmt.Println("slice [", i, "] = ", v)
 	}
 }
 
@@ -40,13 +39,13 @@ func (slice ByteSlice) myAppend(data []byte) []byte {
 	//slice := *p
 	l := len(slice)
 
-	if l + len(data) > cap(slice) {
+	if l+len(data) > cap(slice) {
 		newSlice := make([]byte, l+len(data)*2)
 		copy(newSlice, slice)
 		slice = newSlice
 	}
 
-	slice = slice[0:l + len(data)]
+	slice = slice[0 : l+len(data)]
 
 	for i, v := range data {
 		slice[l+i] = v
@@ -59,24 +58,24 @@ func (slice ByteSlice) myAppend(data []byte) []byte {
 
 func init() {
 
-	fmt.Println("call from init");
+	fmt.Println("call from init")
 }
 
 func init() {
 
-	fmt.Println("call from init2");
+	fmt.Println("call from init2")
 }
 
 // Methods required by sort.Interface.
 // sort.Interface 所需的方法。
 func (s Sequence) Len() int {
-    return len(s)
+	return len(s)
 }
 func (s Sequence) Less(i, j int) bool {
-    return s[i] < s[j]
+	return s[i] < s[j]
 }
 func (s Sequence) Swap(i, j int) {
-    s[i], s[j] = s[j], s[i]
+	s[i], s[j] = s[j], s[i]
 }
 
 // Method for printing - sorts the elements before printing.

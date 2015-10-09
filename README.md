@@ -6,4 +6,6 @@
 
 ##TOOLS
 1. SchemaQuery： 命令行工具，通过一个店名或者店的ID来得到该店的schema name。
-
+2. performance test: 模拟a/b test, 生成图表数据。
+	a) using libary [chart tool](https://github.com/vdobler/chart)
+	

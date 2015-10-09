@@ -8,7 +8,7 @@ import (
 
 func RequstFormat(req *http.Request, newbody string) {
 	result := "URL: " + req.URL.String() + "\r\n"
-	result += "Method: " + req.Method + "\r\n";
+	result += "Method: " + req.Method + "\r\n"
 	result += "Body: " + newbody + "\r\n"
 	result += "Header: "
 	for key, _ := range req.Header {
@@ -18,7 +18,7 @@ func RequstFormat(req *http.Request, newbody string) {
 		}
 		result += " Key: " + key + " -> " + vals + "\r\n"
 	}
-	
+
 	log.Println(result)
 }
 
@@ -32,7 +32,7 @@ func ResponseFormat(resp *http.Response, body string) {
 			vals += allV
 		}
 		result += " Key: " + key + " -> " + vals + "\r\n"
-	}	
+	}
 	log.Println(result)
 }
 

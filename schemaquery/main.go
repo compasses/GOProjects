@@ -25,6 +25,7 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
+
 	DSNWithoutSchema = *userName + ":" + *password + "@tcp(" + *host + ")/"
 
 	if *eshopId > 0 {
@@ -32,7 +33,6 @@ func main() {
 		PrintArgs()
 		names := GetSchemaById(*eshopId)
 		fmt.Println("schema name : ", names)
-		return
 	} else {
 		fmt.Println("Use eshop name to get schema name. eshop name:", *eshopName)
 		PrintArgs()
