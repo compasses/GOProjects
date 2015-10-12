@@ -44,6 +44,7 @@ func GetSchemaById(shopId int64) (result string) {
 	DBNames := GetAllDataBaseName(db)
 	log.Println("DB names :", DBNames)
 	for _, schema := range DBNames {
+		log.Println("Querying ", schema)
 		sel := "USE " + schema
 		db.Exec(sel)
 
@@ -76,6 +77,11 @@ func GetSchemaById(shopId int64) (result string) {
 				continue
 			}
 			q := u.Query()
+			
+			if _, ok := q["eshop_id"]; !ok {
+				continue
+			}
+			
 			log.Println("Eshop id is ", q["eshop_id"][0])
 			aId, _ := strconv.ParseInt(q["eshop_id"][0], 10, 8)
 			if aId == shopId {
@@ -84,10 +90,6 @@ func GetSchemaById(shopId int64) (result string) {
 			}
 			break
 		}
-
-		//		if strings.Contains(name, shopName) {
-		//			result = append(result, schema)
-		//		}
 	}
 	return
 }
