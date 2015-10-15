@@ -41,10 +41,13 @@ Duration是每个URL的测试时间，以秒为单位；ThreadNum为并发访问
 TestRequest为具体URL的配置，可以配置GET 或者 POST，同样的header、body可自己定义。
 
 测试结果：
+
+```
 Threads	NumReqs	TPS	AvgResp(s)	MaxResp(s)	MinResp(s)	ErrNums	ErrCodes	URL
-40	177	1.475	25.656	41.135	6.818	0	map[]	http://10.128.163.72/products/product-helmet
-80	0	0	NaN	0	120	0	map[]	http://10.128.163.72/products/product-helmet
-120	0	0	NaN	0	120	0	map[]	http://10.128.163.72/products/product-helmet
+40	241	2.008	18.17	27.231	1.743	0	map[]	http://10.128.163.72/
+80	1	0.008	11.562	11.562	11.562	0	map[]	http://10.128.163.72/
+120	120	1	12.067	15.181	11.822	120	map[503:120]	http://10.128.163.72/
+```
 
 以上结果可直接导入到excel。
 
