@@ -77,11 +77,11 @@ func GetSchemaById(shopId int64) (result string) {
 				continue
 			}
 			q := u.Query()
-			
+
 			if _, ok := q["eshop_id"]; !ok {
 				continue
 			}
-			
+
 			log.Println("Eshop id is ", q["eshop_id"][0])
 			aId, _ := strconv.ParseInt(q["eshop_id"][0], 10, 8)
 			if aId == shopId {

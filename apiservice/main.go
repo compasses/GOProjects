@@ -50,8 +50,8 @@ func init() {
 
 func RunDefaultServer(local string, handler http.Handler) {
 	log.Println("Listen ON: ", local)
-	//log.Fatal(http.ListenAndServe(local, handler))
-	log.Fatal(http.ListenAndServeTLS(local, "cert.pem", "key.pem", handler))
+	log.Fatal(http.ListenAndServe(local, handler))
+	//log.Fatal(http.ListenAndServeTLS(local, "cert.pem", "key.pem", handler))
 }
 
 func main() {

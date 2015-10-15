@@ -1,24 +1,15 @@
 {
-	"Duration":3600,
-	"ThreadNum":[160, 80],
+	"Duration":5,
+	"ThreadNum":[1],
 	"TestRequest":[
 		{
-			"URL":"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
-			"Method":"GET",
-			"Body":"",
-			"Header":{
-				"tid":"1",
-				"token":"1122"
-			}			
-		},
-		{
-			"URL":"http://10.128.161.107/occ-eshop/collections/all?orderby=2",
+			"URL":"http://cnpvgvb1ep015.pvgl.sap.corp:49193/cart/add.json",
 			"Method":"POST",
-			"Body":"",
+			"Body":"skuId=16&quantity=1&securityToken=3",
 			"Header":{
 				"tid":"1",
 				"token":"1122"
-			}			
+			}
 		}
 	]
 }
