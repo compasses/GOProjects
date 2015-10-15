@@ -8,8 +8,8 @@ import (
 )
 
 type RequestStats struct {
-	url             string
-	threads         int64
+	URL             string
+	Threads         int64
 	Duration        int64
 	TPS             float64
 	NumRequest      int64
@@ -70,8 +70,8 @@ func Collect(req Requests, threads int64, timeout time.Duration, done chan bool)
 	}
 
 	var stats RequestStats
-	stats.url = req.URL
-	stats.threads = threads
+	stats.URL = req.URL
+	stats.Threads = threads
 	stats.MinResponseTime = float64(timeout)
 	stats.Duration = int64(timeout)
 	stats.ErrorStatusCode = make(map[int]int)
@@ -139,13 +139,13 @@ func (stats *RequestStats) Searilize() {
 	}
 
 	defer f.Close()
-	res := fmt.Sprint(stats.threads) + "\t" + fmt.Sprint(stats.NumRequest) + "\t" +
+	res := fmt.Sprint(stats.Threads) + "\t" + fmt.Sprint(stats.NumRequest) + "\t" +
 		fmt.Sprintf("%.3f", stats.TPS) + "\t" +
 		fmt.Sprintf("%.3f", stats.AvgResponseTime) + "\t" +
 		fmt.Sprintf("%.3f", stats.MaxResponseTime) + "\t" +
 		fmt.Sprintf("%.3f", stats.MinResponseTime) + "\t" +
 		fmt.Sprint(stats.ErrorNumbers) + "\t" +
-		fmt.Sprint(stats.ErrorStatusCode) + "\t" + fmt.Sprint(stats.url) + "\n"
+		fmt.Sprint(stats.ErrorStatusCode) + "\t" + fmt.Sprint(stats.URL) + "\n"
 
 	f.WriteString(res)
 }
