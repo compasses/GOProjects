@@ -38,7 +38,7 @@ func NewClient(req Requests) *RequestClient {
 	}
 }
 
-func buildHeader(req Requests, header *http.Header) {
+func BuildHeader(req Requests, header *http.Header) {
 	header.Set("Connection", "close")
 	if strings.ToLower(req.Method) == "post" {
 		header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -49,7 +49,7 @@ func buildHeader(req Requests, header *http.Header) {
 	}
 }
 
-func buildBody(req Requests) io.Reader {
+func BuildBody(req Requests) io.Reader {
 	if strings.ToLower(req.Method) == "get" || len(req.Body) <= 0 {
 		return nil
 	}
@@ -61,13 +61,13 @@ func buildBody(req Requests) io.Reader {
 func (httpclient *RequestClient) startRoutine(result chan<- RequestResult, quit chan bool) {
 
 	for {
-		request, err := http.NewRequest(httpclient.req.Method, httpclient.req.URL, buildBody(httpclient.req))
+		request, err := http.NewRequest(httpclient.req.Method, httpclient.req.URL, BuildBody(httpclient.req))
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 
-		buildHeader(httpclient.req, &request.Header)
+		BuildHeader(httpclient.req, &request.Header)
 		now := time.Now()
 		resp, err := httpclient.client.Do(request)
 		elapsed := time.Since(now)
