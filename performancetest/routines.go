@@ -66,7 +66,7 @@ func Collect(req Requests, threads int64, timeout time.Duration, done chan bool)
 	log.Println("start test ", client, "threads ", threads)
 
 	for i := int64(0); i < threads; i++ {
-		go client.startRoutine(result, quit)
+		go client.StartRoutine(result, quit)
 	}
 
 	var stats RequestStats

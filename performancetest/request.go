@@ -58,7 +58,7 @@ func BuildBody(req Requests) io.Reader {
 	return ioutil.NopCloser(bytes.NewReader(newbody))
 }
 
-func (httpclient *RequestClient) startRoutine(result chan<- RequestResult, quit chan bool) {
+func (httpclient *RequestClient) StartRoutine(result chan<- RequestResult, quit chan bool) {
 
 	for {
 		request, err := http.NewRequest(httpclient.req.Method, httpclient.req.URL, BuildBody(httpclient.req))
