@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"testing"
 )
 
@@ -26,5 +28,15 @@ func TestReqHttp(t *testing.T) {
 func TestConfig(t *testing.T) {
 	conf := LoadConfig()
 	log.Println("config: ", conf)
+	httpRequests := BuildHttpRequest(*conf)
+	FinalResult := NewStatsRecord(httpRequests, 0, 0)
+	log.Println(FinalResult)
+	log.Println("get proxy ", os.Getenv("HTTPS_PROXY"))
+	proxyUrl, err := url.Parse(os.Getenv("HTTPS_PROXY"))
+	log.Printf("Get proxy failed...%v", proxyUrl)
 
+	if err != nil {
+		log.Fatalln("Get proxy failed...", err, proxyUrl)
+		return
+	}
 }

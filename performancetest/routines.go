@@ -31,6 +31,7 @@ type Requests struct {
 type RequestResult struct {
 	SingleRespTime float64
 	StatusCode     int
+	RawURL         string
 }
 
 type Config struct {
@@ -39,11 +40,12 @@ type Config struct {
 	TestRequest []Requests
 }
 
-var fileToSave = "./testresult.txt"
-var finalResult map[string][]RequestStats
+var FileToSave = "./testresult.txt"
+
+type FinalStats map[string]*RequestStats
 
 func init() {
-	f, err := os.OpenFile(fileToSave, os.O_WRONLY|os.O_CREATE, 0x777)
+	f, err := os.OpenFile(FileToSave, os.O_WRONLY|os.O_CREATE, 0x777)
 	if err != nil {
 		panic(err)
 	}
@@ -53,38 +55,42 @@ func init() {
 		"MaxResp(s)" + "\t" + "MinResp(s)" + "\t" + "ErrNums" + "\t" +
 		"ErrCodes" + "\t" + "URL" + "\n"
 	f.WriteString(headline)
-	finalResult = make(map[string][]RequestStats)
 }
 
-func Collect(req Requests, threads int64, timeout time.Duration, done chan bool) {
+func NewStatsRecord(req RoutineRequest, threads int64, duration int64) FinalStats {
+	result := make(FinalStats)
+	for _, r := range req {
+		result[r.URL] = &RequestStats{}
+		result[r.URL].ErrorStatusCode = make(map[int]int)
+		result[r.URL].Threads = threads
+		result[r.URL].MinResponseTime = 3600
+		result[r.URL].Duration = duration
+	}
+	return result
+}
+
+func Collect(req RoutineRequest, threads int64, timeout time.Duration, done chan bool) {
 	result := make(chan RequestResult, threads)
 	quit := make(chan bool, threads)
 
-	client := NewClient(req)
 	timetick := time.After(timeout * time.Second)
-
-	log.Println("start test ", client, "threads ", threads)
+	log.Println("start test ", req, "threads ", threads)
 
 	for i := int64(0); i < threads; i++ {
-		go client.StartRoutine(result, quit)
+		go req.StartRoutine(result, quit)
 	}
 
-	var stats RequestStats
-	stats.URL = req.URL
-	stats.Threads = threads
-	stats.MinResponseTime = float64(timeout)
-	stats.Duration = int64(timeout)
-	stats.ErrorStatusCode = make(map[int]int)
+	FinalResult := NewStatsRecord(req, threads, int64(timeout))
 
 	for {
 		select {
 		case res := <-result:
-			stats.StatsRecord(res)
+			FinalResult.StatsRecord(res)
 		case <-timetick:
 			for i := int64(0); i < threads; i++ {
 				quit <- true
 			}
-			finalResult[req.URL] = append(finalResult[req.URL], stats)
+			FinalResult.Searilize()
 			done <- true
 			return
 		}
@@ -93,23 +99,18 @@ func Collect(req Requests, threads int64, timeout time.Duration, done chan bool)
 
 func StartCollect(conf Config) {
 	done := make(chan bool)
+	httpRequests := BuildHttpRequest(conf)
 
 	for _, threads := range conf.ThreadNum {
-		for _, req := range conf.TestRequest {
-			go Collect(req, threads, time.Duration(conf.Duration), done)
-			<-done
-		}
-	}
-
-	log.Println("Start to write results...")
-	for url, _ := range finalResult {
-		for _, stat := range finalResult[url] {
-			stat.Searilize()
-		}
+		go Collect(httpRequests, threads, time.Duration(conf.Duration), done)
+		<-done
 	}
 }
 
-func (stats *RequestStats) StatsRecord(single RequestResult) {
+func (result FinalStats) StatsRecord(single RequestResult) {
+	stats := result[single.RawURL]
+
+	stats.URL = single.RawURL
 	stats.NumRequest++
 	stats.ResponseTime += single.SingleRespTime
 
@@ -128,24 +129,27 @@ func (stats *RequestStats) StatsRecord(single RequestResult) {
 	}
 }
 
-func (stats *RequestStats) Searilize() {
-	stats.AvgResponseTime = float64(stats.ResponseTime) / float64(stats.NumRequest)
-	stats.TPS = float64(stats.NumRequest) / float64(stats.Duration)
-
-	f, err := os.OpenFile(fileToSave, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0x777)
+func (result FinalStats) Searilize() {
+	f, err := os.OpenFile(FileToSave, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0x777)
 	if err != nil {
-		log.Printf(" stats result %v \n", stats)
 		panic(err)
 	}
 
 	defer f.Close()
-	res := fmt.Sprint(stats.Threads) + "\t" + fmt.Sprint(stats.NumRequest) + "\t" +
-		fmt.Sprintf("%.3f", stats.TPS) + "\t" +
-		fmt.Sprintf("%.3f", stats.AvgResponseTime) + "\t" +
-		fmt.Sprintf("%.3f", stats.MaxResponseTime) + "\t" +
-		fmt.Sprintf("%.3f", stats.MinResponseTime) + "\t" +
-		fmt.Sprint(stats.ErrorNumbers) + "\t" +
-		fmt.Sprint(stats.ErrorStatusCode) + "\t" + fmt.Sprint(stats.URL) + "\n"
 
-	f.WriteString(res)
+	for _, stats := range result {
+		stats.AvgResponseTime = float64(stats.ResponseTime) / float64(stats.NumRequest)
+		stats.TPS = float64(stats.NumRequest) / float64(stats.Duration)
+
+		res := fmt.Sprint(stats.Threads) + "\t" + fmt.Sprint(stats.NumRequest) + "\t" +
+			fmt.Sprintf("%.3f", stats.TPS) + "\t" +
+			fmt.Sprintf("%.3f", stats.AvgResponseTime) + "\t" +
+			fmt.Sprintf("%.3f", stats.MaxResponseTime) + "\t" +
+			fmt.Sprintf("%.3f", stats.MinResponseTime) + "\t" +
+			fmt.Sprint(stats.ErrorNumbers) + "\t" +
+			fmt.Sprint(stats.ErrorStatusCode) + "\t" + fmt.Sprint(stats.URL) + "\n"
+
+		f.WriteString(res)
+	}
+
 }
