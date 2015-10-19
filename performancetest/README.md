@@ -54,6 +54,11 @@ Threads	NumReqs	TPS	AvgResp(s)	MaxResp(s)	MinResp(s)	ErrNums	ErrCodes	URL
 ##实现说明：
 借鉴[Go Concurrency Patterns](https://talks.golang.org/2012/concurrency.slide#1)，每个Thread都是一个goroutine，
 使用fan-in模型，有个单独的routine来收集测试结果数据。总是实现上较为简洁，只使用了Go原生的lib。
+###Note
+如果需要网络需要走proxy，需要在环境变量里面设置proxy。或者
+set https_proxy=http://proxy.xx:8080 
+set http_proxy=http://proxy.xx:8080 
+
 
 
 

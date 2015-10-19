@@ -1,3 +1,7 @@
+// Copyright 2015 JetHe. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -19,14 +23,14 @@ func LoadConfig() *Config {
 		log.Println("read file failed...", err)
 		return nil
 	}
-
-	err = json.Unmarshal([]byte(string(data)), &conf)
+	ConfigData = string(data)
+	
+	err = json.Unmarshal(data, &conf)
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
-	log.Println("get configuration:", conf)
 	return &conf
 }
 

@@ -41,6 +41,7 @@ type Config struct {
 }
 
 var FileToSave = "./testresult.txt"
+var ConfigData string
 
 type FinalStats map[string]*RequestStats
 
@@ -71,28 +72,26 @@ func NewStatsRecord(req RoutineRequest, threads int64, duration int64) FinalStat
 
 func Collect(req RoutineRequest, threads int64, timeout time.Duration, done chan bool) {
 	result := make(chan RequestResult, threads)
-	quit := make(chan bool, threads)
+	quit := make(chan bool)
 
 	timetick := time.After(timeout * time.Second)
-	log.Println("start test ", req, "threads ", threads)
-
 	for i := int64(0); i < threads; i++ {
 		go req.StartRoutine(result, quit)
 	}
 
-	FinalResult := NewStatsRecord(req, threads, int64(timeout))
-
+	FinalResult := NewStatsRecord(req, threads, int64(timeout))	
 	for {
 		select {
 		case res := <-result:
 			FinalResult.StatsRecord(res)
 		case <-timetick:
-			for i := int64(0); i < threads; i++ {
-				quit <- true
-			}
+			close(quit) //use close to do the broadcast
 			FinalResult.Searilize()
 			done <- true
 			return
+		default:
+		    fmt.Printf(".")
+		    time.Sleep(50 * time.Millisecond)
 		}
 	}
 }
@@ -100,11 +99,18 @@ func Collect(req RoutineRequest, threads int64, timeout time.Duration, done chan
 func StartCollect(conf Config) {
 	done := make(chan bool)
 	httpRequests := BuildHttpRequest(conf)
-
+	
+	log.Println("Start Test Configuration:")
+	log.Println("\n", ConfigData)
+	
 	for _, threads := range conf.ThreadNum {
+		now := time.Now()
 		go Collect(httpRequests, threads, time.Duration(conf.Duration), done)
 		<-done
+		fmt.Printf("\nFinish on %d threads, used time %s\n", threads, time.Since(now).String())
 	}
+
+	log.Printf("ALL Done, please check the %s file for the result\n", FileToSave)
 }
 
 func (result FinalStats) StatsRecord(single RequestResult) {

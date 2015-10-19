@@ -1,6 +1,6 @@
 #APIService
 ##说明
-支持oneline 和 offline 两种模式。
+支持oneline 和 offline 两种模式。支持http和https方式。
 offline时，或者称为MockServer，顾名思义，离线使用的后台服务，即模拟真实的server，当后台服务不可达，或者在开发模式下使用。
 特别在两个团队分前后台开发的时候，把后台服务直接模拟出来，两个团队之间只进行API接口编程，这样开发效率也会有较好的提升。
 
@@ -16,10 +16,11 @@ online时，会让其链接真正的service，但是要起到debug的作用。�
 3. 因为实际使用是走https的，所以这个proxy可以将请求做二次处理，并能记录详细信息。
 
 ##config.json说明
-1. runMode， 0或者1，分别表示offline和online；
-2. remoteServer，online时，请求的远程服务器；
-3. listenOn, APIService的监听地址。
-4. LogFile, 日志文件名字。
+1. runMode， 表示offline和online；
+2. "TLS"，是否起用https模式；
+3. remoteServer，online时，请求的远程服务器；
+4. listenOn, APIService的监听地址。
+5. LogFile, 日志文件名字。留空的话直接打印到命令行窗口。
 
 ##总体结构图：
 ![architecture](./architecture.PNG)
