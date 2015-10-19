@@ -17,7 +17,7 @@ online时，会让其链接真正的service，但是要起到debug的作用。�
 
 ##config.json说明
 1. runMode， 表示offline和online；
-2. "TLS"，是否起用https模式；
+2. TLS，是否起用https模式；
 3. remoteServer，online时，请求的远程服务器；
 4. listenOn, APIService的监听地址。
 5. LogFile, 日志文件名字。留空的话直接打印到命令行窗口。

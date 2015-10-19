@@ -1,11 +1,11 @@
 #A another tool for http loading test
 
 ##说明
-1.针对url进行loading test，类似于ab test;
-2.支持http、https，get 和 post；
-3.可以配置header和post的body发送数据，简单易用；
-4.充分使用golang 的 并发模型，高效稳定。输出的test数据可直接导入excel；
-5.后续可以只用画图工具，生成chart，不过目前还没这个需要。
+1.	针对url进行loading test，类似于ab test;
+2.	支持http、https，get 和 post；
+3.	可以配置header和post的body发送数据，简单易用；
+4.	充分使用golang 的 并发模型，高效稳定。输出的test数据可直接导入excel；
+5.	后续可以只用画图工具，生成chart，不过目前还没这个需要。
 
 ##用法
 通过配置问题进行配置设置。
