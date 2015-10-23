@@ -3,8 +3,9 @@
 
 
 1. [APIService](https://github.com/Compasses/Projects-of-GO/tree/master/apiservice)
-2. [CMS](https://github.com/Compasses/Projects-of-GO/tree/master/cms) 还未开始做
-3. [Performance Test](https://github.com/Compasses/Projects-of-GO/tree/master/performancetest)	
+2. [Performance Test](https://github.com/Compasses/Projects-of-GO/tree/master/performancetest)	
+3. [Mysql proxy](https://github.com/Compasses/Projects-of-GO/tree/master/mysqlproxy)	
 4. [SchemaQuery](https://github.com/Compasses/Projects-of-GO/tree/master/schemaquery)
 	命令行工具，通过一个店名或者店的ID来得到该店的schema name。
-	
+5. [CMS](https://github.com/Compasses/Projects-of-GO/tree/master/cms) 还未开始做
+
