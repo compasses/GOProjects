@@ -70,7 +70,10 @@ func GetSchemaById(shopId int64) (result string) {
 				continue
 			}
 			m := dataS[0].(map[string]interface{})
-			urlstr := m["http"].(string)
+			if _, ok := m["https"]; !ok {
+				continue
+			}
+			urlstr := m["https"].(string)
 			u, err := url.Parse(urlstr)
 			if err != nil {
 				log.Println("Parser URL failed...", err)
@@ -133,7 +136,7 @@ func GetSchemaByName(shopName string) (result []string) {
 			name = m["shopName"].(string)
 			break
 		}
-		log.Println("Name is ", name)
+		log.Println("Name is ", name, "schema is ", schema)
 		if strings.Contains(name, shopName) {
 			result = append(result, schema)
 		}

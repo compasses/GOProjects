@@ -1,6 +1,8 @@
 package online
 
 import (
+	"net"
+	"time"
 	"bytes"
 	"crypto/tls"
 	"io/ioutil"
@@ -15,8 +17,13 @@ type ProxyRoute struct {
 
 func NewProxyHandler(newurl string) *ProxyRoute {
 	tr := &http.Transport{
-		TLSClientConfig:    &tls.Config{},
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 		DisableCompression: true,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	return &ProxyRoute{
 		client: &http.Client{Transport: tr},
@@ -35,9 +42,10 @@ func (proxy *ProxyRoute) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("New Request: ")
 	RequstFormat(newRq, string(newbody))
-
+	now := time.Now()
 	resp, err := proxy.client.Do(newRq)
-
+	defer resp.Body.Close()
+	log.Println("Time used: ", time.Since(now))
 	if err != nil {
 		log.Println("get error ", err)
 	} else {
