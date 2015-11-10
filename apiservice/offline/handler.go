@@ -23,12 +23,10 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 func PlaceOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
 	dec := json.NewDecoder(r.Body)
-	var result interface{}
+	var result OrderCreate
 	dec.Decode(&result)
 
-	eshopOrder := RetrieveByMapLevel(result, []string{"eShopOrder"})
-
-	newOrder := RepoCreateOrder(eshopOrder)
+	newOrder := RepoCreateOrder(result)
 
 	log.Println("PlaceOrder Rsp: ", newOrder)
 
@@ -46,25 +44,45 @@ func GetSalesOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	Req := req.(map[string]interface{})
 	Id := TableId(ToInt64FromString(Req["orderId"].(string)))
 
-	log.Println("Req order id", Id)
-	salesOrder := RepoGetSalesOrder(Id)
+	log.Println("GetSalesOrder", req)
+	salesOrder := RepoGetSalesOrder(Id, Req["channelAccountId"].(string))
 
 	if err := json.NewEncoder(w).Encode(salesOrder); err != nil {
 		panic(err)
 	}
 }
 
+func GetSalesOrders(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.ParseForm()
+
+	dec := json.NewDecoder(r.Body)
+	var req interface{}
+	dec.Decode(&req)
+	Req := req.(map[string]interface{})
+
+	log.Println("GetSalesOrders", req)
+	salesOrders := RepoGetSalesOrders(Req["channelAccountId"].(string))
+
+	if err := json.NewEncoder(w).Encode(salesOrders); err != nil {
+		panic(err)
+	}
+	log.Println("GetSalesOrders Rsp", salesOrders)
+
+}
+
 func Checkout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
 	dec := json.NewDecoder(r.Body)
-	var result interface{}
-	dec.Decode(&result)
+	var result CheckoutShoppingCart
+	err := dec.Decode(&result)
+	if err != nil {
+		HandleError(err)
+	}
 
-	shoppingCart := RetrieveByMapLevel(result, []string{"shoppingCart"})
-
-	log.Println("Checkout Req:", shoppingCart)
-
-	if err := json.NewEncoder(w).Encode(shoppingCart); err != nil {
+	resp := RepoCheckoutShoppingCart(result.ShoppingCart)
+	log.Println("CheckoutShoppingCart resp: ", resp)
+	
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		panic(err)
 	}
 
@@ -117,6 +135,28 @@ func RecommandationProducts(w http.ResponseWriter, r *http.Request, ps httproute
 	log.Printf("RecommandProducts Rsp%+v\n", RecommandIds)
 }
 
+func GetCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	r.ParseForm()
+	var channelAccountId interface{}
+	dec := json.NewDecoder(r.Body)
+
+	err := dec.Decode(&channelAccountId)
+	id := channelAccountId.(map[string]interface{})
+
+	if err != nil {
+		HandleError(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	Account := RepoGetCustomer(GetIdFromStr(id["channelAccountId"].(string)))
+
+	if err := json.NewEncoder(w).Encode(Account); err != nil {
+		panic(err)
+	}
+	log.Printf("Return Customer Rsp %+v\n", Account)
+}
+
 func CreateCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
 	var customer CustomerCreate
@@ -160,6 +200,7 @@ func CustomerAddressNew(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	}
 
 	log.Printf("Create address info %+v\n", addInfo)
+	log.Printf("Result %+v\n", Rs)
 
 }
 
@@ -179,6 +220,7 @@ func CustomerAddressUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	Rs := RepoUpdateAddress(addressId, &addInfo)
+	log.Printf("Update address info %+v\n", Rs)
 
 	if err = json.NewEncoder(w).Encode(Rs); err != nil {
 		panic(err)

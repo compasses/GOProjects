@@ -31,6 +31,12 @@ func ToInt64FromString(input string) int64 {
 	re, _ := strconv.ParseInt(input, 10, 8)
 	return re
 }
+
+func ToFloat64FromString(input string) float64 {
+	re, _ := strconv.ParseFloat(input, 8)
+	return re
+}
+
 func GetSliceIntFromBytes(input []byte) []TableId {
 	sizeofInt := 8
 	data := make([]TableId, len(input)/sizeofInt)

@@ -21,8 +21,8 @@ type RecommandInfo struct {
 
 type Customer struct {
 	Id           TableId `json:"id,string"`
-	CustomerType string
-	Email        string
+	CustomerType string  `json:"customerType"`
+	Email        string  `json:"email"`
 }
 
 type CustomerCreateRsp struct {
@@ -47,3 +47,52 @@ type CustomerCreate struct {
 	AccountInfo  CustomerCreateRsp
 	Addresses    []CustomerAddress
 }
+
+type CartItems struct {
+	SkuId              interface{} `json:"skuId"`
+	UnitPrice          interface{} `json:"unitPrice"`
+	Quantity           interface{} `json:"quantity"`
+	TaxAmount          interface{} `json:"taxAmount"`
+	DiscountPercentage interface{} `json:"discountPercentage"`
+	LineTotal          interface{} `json:"lineTotal"`
+	LineTotalAfterDisc interface{} `json:"lineTotalAfterDisc"`
+	StandardPrice      interface{} `json:"standardPrice"`
+}
+
+type ShoppingCart struct {
+	CartTotal          interface{} `json:"cartTotal"`
+	DiscountPercentage interface{} `json:"discountPercentage"`
+	DiscountSum        interface{} `json:"discountSum"`
+	PriceMethod        interface{} `json:"priceMethod"`
+	CartItems          []CartItems `json:"cartItems"`
+}
+
+type CheckoutCartPlayLoad struct {
+	ShippingAddress    interface{}  `json:"shippingAddress"`
+	BillingAddress     interface{}  `json:"billingAddress"`
+	CustomerId         interface{}  `json:"customerId"`
+	ChannelAccountId   interface{}  `json:"channelAccountId"`
+	ChannelId          interface{}  `json:"channelId"`
+	ShoppingCart       ShoppingCart `json:"shoppingCart"`
+	ShippingMethod     interface{}  `json:"shippingMethod"`
+	Promotion          interface{}  `json:"promotion"`
+	TaxTotal           interface{}  `json:"taxTotal"`
+	OrderTotal         interface{}  `json:"orderTotal"`
+	DiscountPercentage interface{}  `json:"discountPercentage"`
+	DiscountSum        interface{}  `json:"discountSum"`
+}
+
+type CheckoutShoppingCart struct {
+	ShoppingCart CheckoutCartPlayLoad `json:"shoppingCart"`
+}
+
+type CheckoutShoppingCartRsp struct {
+	CheckoutCartPlayLoad	
+	ShippingCosts interface{} `json:"shippingCosts"`
+	EnableExpressDelivery	bool `json:"enableExpressDelivery"`
+}
+
+type OrderCreate struct {
+	EShopOrder CheckoutCartPlayLoad `json:"eShopOrder"`
+}
+

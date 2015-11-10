@@ -33,6 +33,12 @@ var routes = Routes{
 		CreateCustomer,
 	},
 	Route{
+		"Get Customer",
+		"POST",
+		"/sbo/service/CustomerService@getCustomer",
+		GetCustomer,
+	},
+	Route{
 		"Address New",
 		"POST",
 		"/sbo/service/CustomerAddressNew",
@@ -73,5 +79,11 @@ var routes = Routes{
 		"POST",
 		"/sbo/service/EShopService@getSalesOrder",
 		GetSalesOrder,
+	},
+	Route{
+		"GetSalesOrders",
+		"POST",
+		"/sbo/service/EShopService@getSalesOrders",
+		GetSalesOrders,
 	},
 }
