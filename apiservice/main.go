@@ -13,7 +13,7 @@ import (
 
 type config struct {
 	RunMode      string
-	TLS			 string
+	TLS          string
 	RemoteServer string
 	ListenOn     string
 	LogFile      string
@@ -31,7 +31,7 @@ func GetConfiguration() error {
 		log.Println("Just run in offline mode")
 		return err
 	}
-	
+
 	var conf config
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -48,7 +48,7 @@ func GetConfiguration() error {
 }
 
 func RunDefaultServer(handler http.Handler) {
-	
+
 	log.Println("Listen ON: ", GlobalConfig.ListenOn)
 	if GlobalConfig.TLS == "on" {
 		log.Fatal(http.ListenAndServeTLS(GlobalConfig.ListenOn, "cert.pem", "key.pem", handler))
@@ -59,7 +59,7 @@ func RunDefaultServer(handler http.Handler) {
 
 func main() {
 	err := GetConfiguration()
-	
+
 	if err != nil {
 		log.Println("Run in default, server: ", localServer, "offline, on http")
 		router := offline.ServerRouter()

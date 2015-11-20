@@ -86,4 +86,10 @@ var routes = Routes{
 		"/sbo/service/EShopService@getSalesOrders",
 		GetSalesOrders,
 	},
+	Route{
+		"BackUpDatabase",
+		"GET",
+		"/backupDB",
+		BackupDB,
+	},
 }

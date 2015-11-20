@@ -3,10 +3,12 @@ package offline
 import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
+	"github.com/Compasses/bolt"
 	"log"
 	"net"
 	"net/http"
 	"strings"
+	"strconv"
 )
 
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +20,20 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	var result interface{}
 	dec.Decode(&result)
 	log.Println("Req:", result)
+}
+
+func BackupDB(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+    err := GlobalDB.View(func(tx *bolt.Tx) error {
+        w.Header().Set("Content-Type", "application/octet-stream")
+        w.Header().Set("Content-Disposition", `attachment; filename="EshopOfflineServerDB"`)
+        w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
+        _, err := tx.WriteTo(w)
+        return err
+    })
+    
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
 }
 
 func PlaceOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -66,7 +82,7 @@ func GetSalesOrders(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	if err := json.NewEncoder(w).Encode(salesOrders); err != nil {
 		panic(err)
 	}
-	log.Println("GetSalesOrders Rsp", salesOrders)
+	log.Println("GetSalesOrders Rsp", req)
 
 }
 
@@ -81,7 +97,7 @@ func Checkout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	resp := RepoCheckoutShoppingCart(result.ShoppingCart)
 	log.Println("CheckoutShoppingCart resp: ", resp)
-	
+
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		panic(err)
 	}
@@ -148,6 +164,7 @@ func GetCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	log.Printf("Get customer req %+v\n", channelAccountId)
 
 	Account := RepoGetCustomer(GetIdFromStr(id["channelAccountId"].(string)))
 

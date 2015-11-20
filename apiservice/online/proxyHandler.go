@@ -1,13 +1,13 @@
 package online
 
 import (
-	"net"
-	"time"
 	"bytes"
 	"crypto/tls"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"time"
 )
 
 type ProxyRoute struct {
@@ -25,6 +25,7 @@ func NewProxyHandler(newurl string) *ProxyRoute {
 		}).Dial,
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
+
 	return &ProxyRoute{
 		client: &http.Client{Transport: tr},
 		url:    newurl}

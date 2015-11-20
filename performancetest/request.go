@@ -29,7 +29,7 @@ func BuildHttpRequest(conf Config) (requests RoutineRequest) {
 }
 
 func BuildHeader(req Requests, header *http.Header) {
-	header.Set("Connection", "close")
+	header.Set("Connection", "keep-alive")
 	if strings.ToLower(req.Method) == "post" {
 		header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
@@ -85,7 +85,7 @@ func NewClient(req Requests) *RequestClient {
 
 	if strings.ToLower(u.Scheme) == "https" {
 		tr := &http.Transport{
-			TLSClientConfig:    &tls.Config{},
+			TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 			DisableCompression: true,
 			Proxy:              HandleProxy(true),
 		}
