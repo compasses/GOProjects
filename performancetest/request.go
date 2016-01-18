@@ -115,6 +115,7 @@ func (httpclient RoutineRequest) StartRoutine(result chan<- RequestResult, quit 
 			req := *request.httpReq //http.Request not thread safe, need copy it.
 
 			now := time.Now()
+			
 			resp, err := request.Client.Do(&req)
 			elapsed := time.Since(now)
 

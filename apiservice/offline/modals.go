@@ -29,6 +29,7 @@ type CustomerCreateRsp struct {
 	CustomerCode     string  `json:"customerCode"`
 	CustomerID       TableId `json:"customerID"`
 	ChannelAccountID TableId `json:"channelAccountID"`
+	//FailType		 string `json:"failType"`
 }
 
 type CustomerAddress struct {

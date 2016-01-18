@@ -11,6 +11,26 @@ import (
 	"strconv"
 )
 
+func MockServerError(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	w.WriteHeader(500)
+	result := map[string]interface{} {
+		"odata.error": map[string]interface{} {
+			"error-code" : "P129S00003",
+			"path" : nil, 
+			"targetLabel" : nil, 
+			"message" : map[string]interface{} {
+				"lang" : "zh-CN",
+				 "value" : "系统出错。我们已经收到错误通知，正在处理。",
+			 },
+		},
+	}
+	log.Printf("MockServerError Rsp: %+v", result)
+
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		panic(err)
+	}
+}
+
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	r.ParseForm() //解析参数，默认是不会解析的
@@ -31,6 +51,7 @@ func BackupDB(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
         return err
     })
     
+
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     }
@@ -41,7 +62,7 @@ func PlaceOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	dec := json.NewDecoder(r.Body)
 	var result OrderCreate
 	dec.Decode(&result)
-
+	log.Printf("got place order request: %+v\n", result)
 	newOrder := RepoCreateOrder(result)
 
 	log.Println("PlaceOrder Rsp: ", newOrder)
@@ -172,6 +193,22 @@ func GetCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		panic(err)
 	}
 	log.Printf("Return Customer Rsp %+v\n", Account)
+}
+
+func UpdateCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	
+	if err := json.NewEncoder(w).Encode(nil); err != nil {
+		panic(err)
+	}
+	
+	log.Printf("customer exist")
+}
+func CheckEmailExistence(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	
+	if err := json.NewEncoder(w).Encode(nil); err != nil {
+		panic(err)
+	}
+	log.Printf("customer exist")
 }
 
 func CreateCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

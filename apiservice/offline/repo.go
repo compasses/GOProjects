@@ -370,11 +370,13 @@ func RepoGetCustomer(channelAccountId TableId) interface{} {
 	return map[string]interface{}{
 		"id":                    result.AccountInfo.CustomerID,
 		"displayName":           "Jet He",
-		"email":                 result.Account,
+		"email":                 "update@customer.com",//result.Account,
 		"checkDuplication":      true,
 		"creationTime":          "2015-11-17T05:56:58.812Z",
 		"creatorDisplayName":    "ERP SUITE",
-		"creditLimit":           nil,
+		"creditLimit":           "250000",
+		"creditBalance":		 "100000",
+		"outstandingPayment":	 "300000",
 		"customerCode":          "3",
 		"customerName":          "Jet Jet",
 		"customerType":          "CORPORATE_CUSTOMER",
@@ -489,9 +491,11 @@ func RepoCreateAccount(customer CustomerCreate) CustomerCreateRsp {
 			customer.AccountInfo.CustomerID = TableId(customerId)
 			customer.AccountInfo.CustomerCode = "offline" + strconv.FormatInt(customer.AccountInfo.CustomerID.ToInt(), 10)
 			customer.AccountInfo.ChannelAccountID = TableId(customer.ChannelId * customer.AccountInfo.CustomerID)
+			//test 
 			cusStream, _ := json.Marshal(&customer)
 			b.Put([]byte("User"), cusStream)
 			pb.Put(customer.AccountInfo.ChannelAccountID.ToBytes(), cusStream)
+			//customer.AccountInfo.FailType = "CUSTOMERTYPEMISSMATCH"
 			result = customer.AccountInfo
 			//			pbaddr, err := tx.CreateBucketIfNotExists([]byte(AddressTable))
 			//			if err != nil {

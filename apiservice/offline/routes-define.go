@@ -33,6 +33,12 @@ var routes = Routes{
 		CreateCustomer,
 	},
 	Route{
+		"check email exist",
+		"POST",
+		"/sbo/service/CustomerService@isEmailAccountExist",
+		CheckEmailExistence,
+	},
+	Route{
 		"Get Customer",
 		"POST",
 		"/sbo/service/CustomerService@getCustomer",
@@ -43,6 +49,12 @@ var routes = Routes{
 		"POST",
 		"/sbo/service/CustomerAddressNew",
 		CustomerAddressNew,
+	},
+	Route{
+		"Update Customer",
+		"POST",
+		"/sbo/service/	EShopService@updateCustomer",
+		UpdateCustomer,
 	},
 	Route{
 		"Address Update",
@@ -72,7 +84,7 @@ var routes = Routes{
 		"PlaceOrder",
 		"POST",
 		"/sbo/service/EShopService@placeOrder",
-		PlaceOrder,
+		MockServerError,
 	},
 	Route{
 		"GetSalesOrder",

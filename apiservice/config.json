@@ -1,7 +1,8 @@
 {
 	"RunMode":"offline",
-	"TLS":"off",
-	"RemoteServer":"https://cnpvgvb1ep140.pvgl.sap.corp:49197",
-	"ListenOn":"10.128.163.72:8080",
-	"LogFile":""
+	"TLS":"on",
+	"RemoteServer":"https://CNPVGVB1EP015.sapanywhere.sap.corp:32819",
+	"ListenOn":"10.128.161.107:9090",
+	"LogFile":"",
+	"GrabIF":""
 }

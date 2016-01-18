@@ -9,6 +9,12 @@ import (
 
 func Logger(inner httprouter.Handle, name string) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		log.Printf(
+			"Start to handle : %s\t%s\t%s\t",
+			r.Method,
+			r.RequestURI,
+			name,
+		)
 		start := time.Now()
 		//time.Sleep(time.Millisecond * 1000)
 		inner(w, r, ps)

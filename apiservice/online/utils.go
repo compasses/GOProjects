@@ -6,7 +6,19 @@ import (
 	"reflect"
 )
 
-func RequstFormat(req *http.Request, newbody string) {
+var SuccNum int  = 0
+var FailNum int  = 0
+
+func LogOutPut(NeedLog bool,v ...interface{}) {
+	if NeedLog {
+		log.Println(v)
+	}
+}
+
+func RequstFormat(NeedLog bool, req *http.Request, newbody string) {
+	if !NeedLog {
+		return
+	}
 	result := "URL: " + req.URL.String() + "\r\n"
 	result += "Method: " + req.Method + "\r\n"
 	result += "Body: " + newbody + "\r\n"
@@ -18,11 +30,14 @@ func RequstFormat(req *http.Request, newbody string) {
 		}
 		result += " Key: " + key + " -> " + vals + "\r\n"
 	}
-
-	log.Println(result)
+	LogOutPut(NeedLog, result)
 }
 
-func ResponseFormat(resp *http.Response, body string) {
+func ResponseFormat(NeedLog bool, resp *http.Response, body string) {
+	if !NeedLog {
+		return
+	}
+	
 	result := "Status: " + resp.Status + "\r\n"
 	result += "Body: " + body + "\r\n"
 	result += "Header: "
@@ -33,7 +48,7 @@ func ResponseFormat(resp *http.Response, body string) {
 		}
 		result += " Key: " + key + " -> " + vals + "\r\n"
 	}
-	log.Println(result)
+	LogOutPut(NeedLog, result)
 }
 
 func ReflectStruct(req *http.Request) {

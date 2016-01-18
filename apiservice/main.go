@@ -17,6 +17,7 @@ type config struct {
 	RemoteServer string
 	ListenOn     string
 	LogFile      string
+	GrabIF		 string
 }
 
 var GlobalServerStatus int64 = 0
@@ -86,14 +87,13 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
 
 	log.Println("Begin API LOG------------------------")
-
 	if GlobalConfig.RunMode == "offline" {
 		log.Println("API Run in offline mode...")
 		router := offline.ServerRouter()
 		RunDefaultServer(router)
 	} else {
 		log.Println("API Run in online mode...")
-		proxy := online.NewProxyHandler(GlobalConfig.RemoteServer)
+		proxy := online.NewProxyHandler(GlobalConfig.RemoteServer, GlobalConfig.GrabIF)
 		RunDefaultServer(proxy)
 	}
 }

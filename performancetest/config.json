@@ -1,10 +1,10 @@
 {
-	"Duration":5,
-	"ThreadNum":[1],
+	"Duration":10,
+	"ThreadNum":[10],
 	"TestRequest":[
 		{
-			"URL":"http://cnpvgvb1ep015.pvgl.sap.corp:49193/cart/add.json",
-			"Method":"POST",
+			"URL":"http://www.baidu.com",
+			"Method":"GET",
 			"Body":"skuId=16&quantity=1&securityToken=3",
 			"Header":{
 				"tid":"1",

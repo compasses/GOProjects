@@ -8,14 +8,16 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"strings"
 )
 
 type ProxyRoute struct {
 	client *http.Client
 	url    string
+	GrabIF string
 }
 
-func NewProxyHandler(newurl string) *ProxyRoute {
+func NewProxyHandler(newurl , grabIF string) *ProxyRoute {
 	tr := &http.Transport{
 		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
 		DisableCompression: true,
@@ -25,28 +27,42 @@ func NewProxyHandler(newurl string) *ProxyRoute {
 		}).Dial,
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
-
+	
+	go func() {
+		for {
+			// Wait for 10s.
+			time.Sleep(10 * time.Second)
+			if (FailNum+SuccNum) > 0 {
+				log.Printf("\n\tIF: %s SuccNum:%d FailNum:%d FailureRate:%f\n\n", grabIF, SuccNum,FailNum,float32((FailNum))/float32((FailNum+SuccNum)))
+			}
+		}
+	}()
 	return &ProxyRoute{
 		client: &http.Client{Transport: tr},
-		url:    newurl}
+		url:    newurl,
+		GrabIF:	grabIF}
 }
 
 func (proxy *ProxyRoute) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	newbody := make([]byte, req.ContentLength)
 	req.Body.Read(newbody)
-
+	NeedLog := strings.Contains(req.RequestURI, proxy.GrabIF)
+	
 	newRq, err := http.NewRequest(req.Method, proxy.url+req.RequestURI, ioutil.NopCloser(bytes.NewReader(newbody)))
 	if err != nil {
 		log.Println("new request error ", err)
 	}
 	newRq.Header = req.Header
 
-	log.Println("New Request: ")
-	RequstFormat(newRq, string(newbody))
+	LogOutPut(NeedLog, "New Request: ")
+	RequstFormat(NeedLog, newRq, string(newbody))
 	now := time.Now()
 	resp, err := proxy.client.Do(newRq)
-	defer resp.Body.Close()
-	log.Println("Time used: ", time.Since(now))
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	
+	LogOutPut(NeedLog, "Time used: ", time.Since(now))
 	if err != nil {
 		log.Println("get error ", err)
 	} else {
@@ -54,8 +70,21 @@ func (proxy *ProxyRoute) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Println("ioutil read err ", err)
 		}
-		log.Println("Get response : ")
-		ResponseFormat(resp, string(res))
+		
+		if NeedLog {
+			if resp.StatusCode != 200 {
+				FailNum++
+			} else {
+				SuccNum++
+			}
+		}
+		
+		LogOutPut(NeedLog, "Get response : ")
+		ResponseFormat(NeedLog, resp, string(res))
+		for key, _ := range resp.Header {
+			w.Header().Set(key, strings.Join(resp.Header[key], ";"))
+		}
+		
 		w.Write(res)
 	}
 }
