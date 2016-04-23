@@ -2,26 +2,28 @@ package offline
 
 import (
 	"encoding/json"
-	"github.com/julienschmidt/httprouter"
-	"github.com/Compasses/bolt"
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
+
+	"github.com/Compasses/bolt"
+	"github.com/julienschmidt/httprouter"
 )
 
+//MockServerError for some error handler
 func MockServerError(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.WriteHeader(500)
-	result := map[string]interface{} {
-		"odata.error": map[string]interface{} {
-			"error-code" : "P129S00003",
-			"path" : nil, 
-			"targetLabel" : nil, 
-			"message" : map[string]interface{} {
-				"lang" : "zh-CN",
-				 "value" : "系统出错。我们已经收到错误通知，正在处理。",
-			 },
+	result := map[string]interface{}{
+		"odata.error": map[string]interface{}{
+			"error-code":  "P129S00003",
+			"path":        nil,
+			"targetLabel": nil,
+			"message": map[string]interface{}{
+				"lang":  "zh-CN",
+				"value": "系统出错。我们已经收到错误通知，正在处理。",
+			},
 		},
 	}
 	log.Printf("MockServerError Rsp: %+v", result)
@@ -31,6 +33,7 @@ func MockServerError(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	}
 }
 
+//NotFoundHandler not found error
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	r.ParseForm() //解析参数，默认是不会解析的
@@ -42,21 +45,22 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Req:", result)
 }
 
+//BackupDB backupdb
 func BackupDB(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-    err := GlobalDB.View(func(tx *bolt.Tx) error {
-        w.Header().Set("Content-Type", "application/octet-stream")
-        w.Header().Set("Content-Disposition", `attachment; filename="EshopOfflineServerDB"`)
-        w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
-        _, err := tx.WriteTo(w)
-        return err
-    })
-    
+	err := GlobalDB.View(func(tx *bolt.Tx) error {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename="EshopOfflineServerDB"`)
+		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
+		_, err := tx.WriteTo(w)
+		return err
+	})
 
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-    }
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
+//PlaceOrder go order
 func PlaceOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
 	dec := json.NewDecoder(r.Body)
@@ -72,6 +76,7 @@ func PlaceOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 }
 
+//GetSalesOrder return sales order
 func GetSalesOrder(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	r.ParseForm()
 
@@ -125,21 +130,27 @@ func Checkout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
 
+//ATS find product ATS
 func ATS(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
 	dec := json.NewDecoder(r.Body)
 	var checkInfo ATSReq
 	err := dec.Decode(&checkInfo)
 
+	var rsp interface{}
+	log.Println("ATS request: ", checkInfo)
+
 	if err != nil {
 		HandleError(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		//w.WriteHeader(http.StatusBadRequest)
+		log.Println("ATS just returen the default")
+		rsp = map[string]interface{}{
+			"allowBackOrder": true,
+		}
+	} else {
+		log.Printf("ATS Req %+v\n", checkInfo)
+		rsp = RepoCreateATSRsp(&checkInfo)
 	}
-
-	log.Printf("ATS Req %+v\n", checkInfo)
-	rsp := RepoCreateATSRsp(&checkInfo)
-
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 
@@ -196,15 +207,15 @@ func GetCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func UpdateCustomer(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	
+
 	if err := json.NewEncoder(w).Encode(nil); err != nil {
 		panic(err)
 	}
-	
+
 	log.Printf("customer exist")
 }
 func CheckEmailExistence(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	
+
 	if err := json.NewEncoder(w).Encode(nil); err != nil {
 		panic(err)
 	}

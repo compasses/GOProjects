@@ -84,7 +84,7 @@ var routes = Routes{
 		"PlaceOrder",
 		"POST",
 		"/sbo/service/EShopService@placeOrder",
-		MockServerError,
+		PlaceOrder,
 	},
 	Route{
 		"GetSalesOrder",

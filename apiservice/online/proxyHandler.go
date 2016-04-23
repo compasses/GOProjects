@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 	"strings"
+  	"compress/gzip"
 )
 
 type ProxyRoute struct {
@@ -28,15 +29,18 @@ func NewProxyHandler(newurl , grabIF string) *ProxyRoute {
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	
-	go func() {
-		for {
-			// Wait for 10s.
-			time.Sleep(10 * time.Second)
-			if (FailNum+SuccNum) > 0 {
-				log.Printf("\n\tIF: %s SuccNum:%d FailNum:%d FailureRate:%f\n\n", grabIF, SuccNum,FailNum,float32((FailNum))/float32((FailNum+SuccNum)))
+	if grabIF != "" {
+		go func() {
+			for {
+				// Wait for 10s.
+				time.Sleep(10 * time.Second)
+				if (FailNum+SuccNum) > 0 {
+					log.Printf("\n\tIF: %s SuccNum:%d FailNum:%d FailureRate:%f\n\n", grabIF, SuccNum,FailNum,float32((FailNum))/float32((FailNum+SuccNum)))
+				}
 			}
-		}
-	}()
+		}()
+	}
+
 	return &ProxyRoute{
 		client: &http.Client{Transport: tr},
 		url:    newurl,
@@ -66,6 +70,13 @@ func (proxy *ProxyRoute) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println("get error ", err)
 	} else {
+		if resp.Header.Get("Content-Encoding") == "gzip" {
+		  	resp.Body, err = gzip.NewReader(resp.Body)
+            if err != nil {
+                    panic(err)
+            }
+		}
+		
 		res, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Println("ioutil read err ", err)

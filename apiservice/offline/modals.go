@@ -1,10 +1,62 @@
 package offline
 
+import (
+	"encoding/json"
+	"log"
+	"strconv"
+)
+
 type TableId int64
+type IDSeqs []TableId
+type StrSeqs []string
 
 type ATSReq struct {
-	SkuIds    []TableId
-	ChannelId int
+	SkuIds   IDSeqs
+	ChanelId TableId
+}
+
+//used to avoid recurision
+type idseqs IDSeqs
+
+func (ids *IDSeqs) UnmarshalJSON(b []byte) (err error) {
+	log.Println("IDSeqs got bytes: ", string(b))
+	var tids *idseqs
+	if err = json.Unmarshal(b, &tids); err == nil {
+		*ids = IDSeqs(*tids)
+		return
+	}
+
+	strid := new(StrSeqs)
+	if err = json.Unmarshal(b, strid); err == nil {
+		for _, val := range *strid {
+			if v, err := strconv.ParseInt(val, 10, 64); err == nil {
+				*ids = append(*ids, TableId(v))
+			}
+		}
+		return
+	} else {
+		log.Println("got error: ", err)
+	}
+	return
+}
+
+func (id *TableId) UnmarshalJSON(b []byte) (err error) {
+	log.Println("TableId got bytes: ", string(b))
+	var tabd int64
+	if err = json.Unmarshal(b, &tabd); err == nil {
+		*id = TableId(tabd)
+		return
+	}
+
+	s := ""
+	if err = json.Unmarshal(b, &s); err == nil {
+		v, err := strconv.ParseInt(s, 10, 64)
+		if err == nil {
+			*id = TableId(v)
+		}
+	}
+
+	return
 }
 
 type ATSRsp struct {
@@ -88,12 +140,11 @@ type CheckoutShoppingCart struct {
 }
 
 type CheckoutShoppingCartRsp struct {
-	CheckoutCartPlayLoad	
-	ShippingCosts interface{} `json:"shippingCosts"`
-	EnableExpressDelivery	bool `json:"enableExpressDelivery"`
+	CheckoutCartPlayLoad
+	ShippingCosts         interface{} `json:"shippingCosts"`
+	EnableExpressDelivery bool        `json:"enableExpressDelivery"`
 }
 
 type OrderCreate struct {
 	EShopOrder CheckoutCartPlayLoad `json:"eShopOrder"`
 }
-

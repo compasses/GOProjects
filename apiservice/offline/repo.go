@@ -2,9 +2,10 @@ package offline
 
 import (
 	"encoding/json"
-	"github.com/Compasses/bolt"
 	"log"
 	"strconv"
+
+	"github.com/Compasses/bolt"
 )
 
 var GlobalDB *bolt.DB
@@ -25,7 +26,14 @@ func RepoCheckoutShoppingCart(checkoutCart CheckoutCartPlayLoad) CheckoutShoppin
 
 	var cartTotal float64
 	for i, val := range result.ShoppingCart.CartItems {
-		quantity := ToInt64FromString(val.Quantity.(string))
+		var quantity float64
+		switch v := val.Quantity.(type) {
+		case string:
+			quantity = ToFloat64FromString(v)
+		default:
+			quantity = float64(v.(float64))
+		}
+
 		price := ToFloat64FromString(val.UnitPrice.(string))
 		result.ShoppingCart.CartItems[i].LineTotal = (float64)(quantity) * price
 		cartTotal += result.ShoppingCart.CartItems[i].LineTotal.(float64)
@@ -244,7 +252,12 @@ func RepoCreateOrder(order OrderCreate) interface{} {
 			HandleError(err)
 			return err
 		}
-		cusOrderBuck, err := orderBucket.CreateBucketIfNotExists([]byte(order.EShopOrder.ChannelAccountId.(string)))
+		var cusOrderBuck *bolt.Bucket
+		if order.EShopOrder.ChannelAccountId == nil {
+			cusOrderBuck, err = orderBucket.CreateBucketIfNotExists([]byte("GUESTUSER"))
+		} else {
+			cusOrderBuck, err = orderBucket.CreateBucketIfNotExists([]byte(order.EShopOrder.ChannelAccountId.(string)))
+		}
 		if err != nil {
 			HandleError(err)
 			return err
@@ -370,13 +383,13 @@ func RepoGetCustomer(channelAccountId TableId) interface{} {
 	return map[string]interface{}{
 		"id":                    result.AccountInfo.CustomerID,
 		"displayName":           "Jet He",
-		"email":                 "update@customer.com",//result.Account,
+		"email":                 "update@customer.com", //result.Account,
 		"checkDuplication":      true,
 		"creationTime":          "2015-11-17T05:56:58.812Z",
 		"creatorDisplayName":    "ERP SUITE",
 		"creditLimit":           "250000",
-		"creditBalance":		 "100000",
-		"outstandingPayment":	 "300000",
+		"creditBalance":         "100000",
+		"outstandingPayment":    "300000",
 		"customerCode":          "3",
 		"customerName":          "Jet Jet",
 		"customerType":          "CORPORATE_CUSTOMER",
@@ -491,7 +504,7 @@ func RepoCreateAccount(customer CustomerCreate) CustomerCreateRsp {
 			customer.AccountInfo.CustomerID = TableId(customerId)
 			customer.AccountInfo.CustomerCode = "offline" + strconv.FormatInt(customer.AccountInfo.CustomerID.ToInt(), 10)
 			customer.AccountInfo.ChannelAccountID = TableId(customer.ChannelId * customer.AccountInfo.CustomerID)
-			//test 
+			//test
 			cusStream, _ := json.Marshal(&customer)
 			b.Put([]byte("User"), cusStream)
 			pb.Put(customer.AccountInfo.ChannelAccountID.ToBytes(), cusStream)
@@ -631,6 +644,8 @@ func RepoGetCustomerAddress(customerId TableId) (result interface{}) {
 }
 
 func init() {
+	//	if GlobalConfig.RunMode != "offline" {
+	//	}
 	var err error
 	GlobalDB, err = bolt.Open("./EshopOfflineServerDB", 0666, nil)
 	if err != nil {

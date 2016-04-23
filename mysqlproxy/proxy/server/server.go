@@ -346,7 +346,7 @@ func (s *Server) GetSchema(db string) *Schema {
 }
 
 func OutPutStat() {
-	filename := fmt.Sprintf("./sqlstat%s.txt", time.Now().String())
+	filename := fmt.Sprintf("./sqlstat_%d.txt", time.Now().Unix())
 	fmt.Println("OutPut stat file", filename, " ...\n")
 
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0x777)
@@ -360,16 +360,18 @@ func OutPutStat() {
 	f.WriteString(res)
 	
 
-	headline := "SQL" + "\t" + "NumReqs" + "\t" + "TimeUsed(s,total)" + "\t" + "ResultLen(B,total)" + 
+	headline := "SQL" + "\t" + "NumReqs" + "\t" + "TimeUsed(s,total)" + "\t" + "AvgTimeUsed(s)" + "\t" + "ResultLen(B,total)" + 
 	"\t" + "ErrorNum" + "\n"
 	
 	f.WriteString(headline)
 	
 	for sql, stats := range RecordSql {
 		sql = strings.Replace(sql, "\n", "", -1)
+		sql = strings.Replace(sql, "\t", "", -1)
+
 
 		res := fmt.Sprint(sql) + "\t" + fmt.Sprint(stats.QueryCount) + "\t" +
-			fmt.Sprint(stats.ResponseTime.Seconds()) + "\t" +
+			fmt.Sprint(stats.ResponseTime.Seconds()) + "\t" + fmt.Sprint(stats.ResponseTime.Seconds()/(float64)(stats.QueryCount)) + "\t" +
 			fmt.Sprint(stats.ResultLen) + "\t" + fmt.Sprint(stats.ErrorNum) + "\n"
 		f.WriteString(res)
 	}

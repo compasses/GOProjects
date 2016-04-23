@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/Compasses/Projects-of-GO/apiservice/offline"
-	"github.com/Compasses/Projects-of-GO/apiservice/online"
+	"github.com/Compasses/GOProjects/apiservice/offline"
+	"github.com/Compasses/GOProjects/apiservice/online"
 	"io/ioutil"
 	"log"
 	"net/http"
