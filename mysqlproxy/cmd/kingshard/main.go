@@ -1,3 +1,17 @@
+// Copyright 2016 The kingshard Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package main
 
 import (
@@ -10,13 +24,15 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/flike/kingshard/config"
-	"github.com/flike/kingshard/core/golog"
+	"github.com/compasses/GOProjects/mysqlproxy/config"
+	"github.com/compasses/GOProjects/mysqlproxy/core/golog"
+	"github.com/compasses/GOProjects/mysqlproxy/core/hack"
 	"github.com/compasses/GOProjects/mysqlproxy/proxy/server"
 )
 
-var configFile *string = flag.String("config", "/etc/kingshard.conf", "kingshard config file")
+var configFile *string = flag.String("config", "ks.yaml", "kingshard config file")
 var logLevel *string = flag.String("log-level", "", "log level [debug|info|warn|error], default error")
+var version *bool = flag.Bool("v", false, "the version of kingshard")
 
 const (
 	sqlLogName = "sql.log"
@@ -37,7 +53,11 @@ func main() {
 	fmt.Print(banner)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
-	
+	fmt.Printf("Git commit:%s\n", hack.Version)
+	fmt.Printf("Build time:%s\n", hack.Compile)
+	if *version {
+		return
+	}
 	if len(*configFile) == 0 {
 		fmt.Println("must use a config file")
 		return
@@ -85,16 +105,12 @@ func main() {
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc,
-		syscall.Signal(10),
-		syscall.SIGKILL,
-		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
 
 	go func() {
 		sig := <-sc
-		fmt.Println("Signal ", sig)
 		golog.Info("main", "main", "Got signal", 0, "signal", sig)
 		golog.GlobalSysLogger.Close()
 		golog.GlobalSqlLogger.Close()

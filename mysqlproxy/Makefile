@@ -3,8 +3,8 @@ all: build
 build: kingshard
 
 kingshard:
-	go build -o bin/sqlproxy ./cmd/proxy
-
+	@bash genver.sh
+	go build -o ./bin/kingshard ./cmd/kingshard
 clean:
 	@rm -rf bin
 

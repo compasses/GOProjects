@@ -1,3 +1,17 @@
+// Copyright 2016 The kingshard Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package server
 
 import (
@@ -5,14 +19,15 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/flike/kingshard/backend"
-	"github.com/flike/kingshard/core/errors"
-	"github.com/flike/kingshard/core/golog"
-	"github.com/flike/kingshard/core/hack"
-	"github.com/flike/kingshard/mysql"
-	"github.com/flike/kingshard/proxy/router"
-	"github.com/flike/kingshard/sqlparser"
+	"github.com/compasses/GOProjects/mysqlproxy/backend"
+	"github.com/compasses/GOProjects/mysqlproxy/core/errors"
+	"github.com/compasses/GOProjects/mysqlproxy/core/golog"
+	"github.com/compasses/GOProjects/mysqlproxy/core/hack"
+	"github.com/compasses/GOProjects/mysqlproxy/mysql"
+	"github.com/compasses/GOProjects/mysqlproxy/proxy/router"
+	"github.com/compasses/GOProjects/mysqlproxy/sqlparser"
 )
 
 /*处理query语句*/
@@ -41,7 +56,6 @@ func (c *ClientConn) handleQuery(sql string) (err error) {
 		return err
 	}
 	if hasHandled {
-		//fmt.Println("Just handle in one node...****")
 		return nil
 	}
 
@@ -73,6 +87,8 @@ func (c *ClientConn) handleQuery(sql string) (err error) {
 		return c.handleRollback()
 	case *sqlparser.Admin:
 		return c.handleAdmin(v)
+	case *sqlparser.AdminHelp:
+		return c.handleAdminHelp(v)
 	case *sqlparser.UseDB:
 		return c.handleUseDB(v)
 	default:
@@ -98,26 +114,27 @@ func (c *ClientConn) getBackendConn(n *backend.Node, fromSlave bool) (co *backen
 		}
 	} else {
 		var ok bool
-		c.Lock()
 		co, ok = c.txConns[n]
-		c.Unlock()
 
 		if !ok {
 			if co, err = n.GetMasterConn(); err != nil {
 				return
 			}
 
-			if err = co.Begin(); err != nil {
-				return
+			if !c.isAutoCommit() {
+				if err = co.SetAutoCommit(0); err != nil {
+					return
+				}
+			} else {
+				if err = co.Begin(); err != nil {
+					return
+				}
 			}
 
-			c.Lock()
 			c.txConns[n] = co
-			c.Unlock()
 		}
 	}
 
-	//todo, set conn charset, etc...
 	if err = co.UseDB(c.db); err != nil {
 		return
 	}
@@ -129,7 +146,7 @@ func (c *ClientConn) getBackendConn(n *backend.Node, fromSlave bool) (co *backen
 	return
 }
 
-/*获取shard的conn，第一个参数表示是不是select*/
+//获取shard的conn，第一个参数表示是不是select
 func (c *ClientConn) getShardConns(fromSlave bool, plan *router.Plan) (map[string]*backend.BackendConn, error) {
 	var err error
 	if plan == nil || len(plan.RouteNodeIndexs) == 0 {
@@ -167,14 +184,19 @@ func (c *ClientConn) getShardConns(fromSlave bool, plan *router.Plan) (map[strin
 
 func (c *ClientConn) executeInNode(conn *backend.BackendConn, sql string, args []interface{}) ([]*mysql.Result, error) {
 	var state string
+	startTime := time.Now().UnixNano()
 	r, err := conn.Execute(sql, args...)
 	if err != nil {
 		state = "ERROR"
 	} else {
-		state = "INFO"
+		state = "OK"
 	}
-	if strings.ToLower(c.proxy.cfg.LogSql) != golog.LogSqlOff {
-		golog.OutputSql(state, "%s->%s:%s",
+	execTime := float64(time.Now().UnixNano()-startTime) / float64(time.Millisecond)
+	if strings.ToLower(c.proxy.logSql[c.proxy.logSqlIndex]) != golog.LogSqlOff &&
+		execTime > float64(c.proxy.slowLogTime[c.proxy.slowLogTimeIndex]) {
+		c.proxy.counter.IncrSlowLogTotal()
+		golog.OutputSql(state, "%.1fms - %s->%s:%s",
+			execTime,
 			c.c.RemoteAddr(),
 			conn.GetAddr(),
 			sql,
@@ -215,16 +237,21 @@ func (c *ClientConn) executeInMultiNodes(conns map[string]*backend.BackendConn, 
 	f := func(rs []interface{}, i int, execSqls []string, co *backend.BackendConn) {
 		var state string
 		for _, v := range execSqls {
+			startTime := time.Now().UnixNano()
 			r, err := co.Execute(v, args...)
 			if err != nil {
 				state = "ERROR"
 				rs[i] = err
 			} else {
-				state = "INFO"
+				state = "OK"
 				rs[i] = r
 			}
-			if c.proxy.cfg.LogSql != golog.LogSqlOff {
-				golog.OutputSql(state, "%s->%s:%s",
+			execTime := float64(time.Now().UnixNano()-startTime) / float64(time.Millisecond)
+			if c.proxy.logSql[c.proxy.logSqlIndex] != golog.LogSqlOff &&
+				execTime > float64(c.proxy.slowLogTime[c.proxy.slowLogTimeIndex]) {
+				c.proxy.counter.IncrSlowLogTotal()
+				golog.OutputSql(state, "%.1fms - %s->%s:%s",
+					execTime,
 					c.c.RemoteAddr(),
 					co.GetAddr(),
 					v,
@@ -278,7 +305,6 @@ func (c *ClientConn) closeShardConns(conns map[string]*backend.BackendConn, roll
 		if rollback {
 			co.Rollback()
 		}
-
 		co.Close()
 	}
 }
@@ -310,183 +336,13 @@ func (c *ClientConn) newEmptyResultset(stmt *sqlparser.Select) *mysql.Resultset 
 	return r
 }
 
-func (c *ClientConn) GetTransExecNode(tokens []string, sql string) (*backend.Node, error) {
-	var execNode *backend.Node
-	var err error
-
-	tokensLen := len(tokens)
-	if 2 <= tokensLen {
-		if tokens[0][0] == mysql.COMMENT_PREFIX {
-			nodeName := strings.Trim(tokens[0], mysql.COMMENT_STRING)
-			if c.schema.nodes[nodeName] != nil {
-				execNode = c.schema.nodes[nodeName]
-			}
-		}
-	}
-
-	if execNode == nil {
-		execNode, _, err = c.GetExecNode(tokens, sql)
-		if err != nil {
-			return nil, err
-		}
-		return execNode, nil
-	}
-	if len(c.txConns) == 1 && c.txConns[execNode] == nil {
-		return nil, errors.ErrTransInMulti
-	}
-	return execNode, nil
-}
-
-func (c *ClientConn) GetExecNode(tokens []string,
-	sql string) (*backend.Node, bool, error) {
-	var execNode *backend.Node
-	var fromSlave bool
-
-	schema := c.proxy.schemas[c.proxy.db]
-	rules := schema.rule.Rules
-
-	tokensLen := len(tokens)
-	if 0 < tokensLen {
-		tokenId, ok := mysql.PARSE_TOKEN_MAP[strings.ToLower(tokens[0])]
-		if ok == true {
-			switch tokenId {
-			case mysql.TK_ID_SELECT, mysql.TK_ID_DELETE:
-				if len(rules) == 0 {
-					if tokenId == mysql.TK_ID_SELECT {
-						fromSlave = true
-					}
-					break
-				}
-				for i := 1; i < tokensLen; i++ {
-					if strings.ToLower(tokens[i]) == mysql.TK_STR_FROM {
-						if i+1 < tokensLen {
-							tableName := sqlparser.GetTableName(tokens[i+1])
-
-							if _, ok := rules[tableName]; ok {
-								return nil, false, nil
-							}
-						}
-					}
-				}
-			case mysql.TK_ID_INSERT, mysql.TK_ID_REPLACE:
-				if len(rules) == 0 {
-					break
-				}
-				for i := 0; i < tokensLen; i++ {
-					if strings.ToLower(tokens[i]) == mysql.TK_STR_INTO {
-						if i+1 < tokensLen {
-							tableName := sqlparser.GetInsertTableName(tokens[i+1])
-							if _, ok := rules[tableName]; ok {
-								return nil, false, nil
-							}
-						}
-					}
-				}
-			case mysql.TK_ID_UPDATE:
-				if len(rules) == 0 {
-					break
-				}
-				for i := 0; i < tokensLen; i++ {
-					if strings.ToLower(tokens[i]) == mysql.TK_STR_SET {
-						tableName := sqlparser.GetTableName(tokens[i-1])
-						if _, ok := rules[tableName]; ok {
-							return nil, false, nil
-						}
-					}
-				}
-			default:
-				return nil, false, nil
-			}
-		}
-	}
-	//get node
-	if 2 <= tokensLen {
-		if tokens[0][0] == mysql.COMMENT_PREFIX {
-			nodeName := strings.Trim(tokens[0], mysql.COMMENT_STRING)
-			if c.schema.nodes[nodeName] != nil {
-				execNode = c.schema.nodes[nodeName]
-			}
-			//select
-			if mysql.PARSE_TOKEN_MAP[tokens[1]] == mysql.TK_ID_SELECT {
-				fromSlave = true
-			}
-		}
-	}
-
-	if execNode == nil {
-		defaultRule := c.schema.rule.DefaultRule
-		if len(defaultRule.Nodes) == 0 {
-			return nil, false, errors.ErrNoDefaultNode
-		}
-		execNode = c.proxy.GetNode(defaultRule.Nodes[0])
-	}
-
-	return execNode, fromSlave, nil
-}
-
-//返回true表示已经处理，false表示未处理
-func (c *ClientConn) preHandleShard(sql string) (bool, error) {
-	var rs []*mysql.Result
-	var err error
-
-	var execNode *backend.Node
-	var fromSlave bool = false
-
-	if len(sql) == 0 {
-		return false, errors.ErrCmdUnsupport
-	}
-
-	tokens := strings.Fields(sql)
-	if len(tokens) == 0 {
-		return false, errors.ErrCmdUnsupport
-	}
-
-	if c.isInTransaction() {
-		execNode, err = c.GetTransExecNode(tokens, sql)
-	} else {
-		execNode, fromSlave, err = c.GetExecNode(tokens, sql)
-	}
-
-	if err != nil {
-		return false, err
-	}
-	//need shard sql
-	if execNode == nil {
-		return false, nil
-	}
-
-	//execute in Master DB
-	conn, err := c.getBackendConn(execNode, fromSlave)
-	if err != nil {
-		return false, err
-	}
-	rs, err = c.executeInNode(conn, sql, nil)
-	if err != nil {
-		return false, err
-	}
-	c.closeConn(conn, false)
-
-	if len(rs) == 0 {
-		msg := fmt.Sprintf("result is empty")
-		golog.Error("ClientConn", "handleUnsupport", msg, c.connectionId)
-		return false, mysql.NewError(mysql.ER_UNKNOWN_ERROR, msg)
-	}
-
-	if rs[0].Resultset != nil {
-		err = c.writeResultset(c.status, rs[0].Resultset)
-	} else {
-		err = c.writeOK(rs[0])
-	}
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 func (c *ClientConn) handleExec(stmt sqlparser.Statement, args []interface{}) error {
 	plan, err := c.schema.rule.BuildPlan(stmt)
+	if err != nil {
+		return err
+	}
 	conns, err := c.getShardConns(false, plan)
+	defer c.closeShardConns(conns, err != nil)
 	if err != nil {
 		golog.Error("ClientConn", "handleExec", err.Error(), c.connectionId)
 		return err
@@ -496,20 +352,8 @@ func (c *ClientConn) handleExec(stmt sqlparser.Statement, args []interface{}) er
 	}
 
 	var rs []*mysql.Result
-	if 1 < len(conns) {
-		return errors.ErrExecInMulti
-	}
-	if 1 < len(plan.RewrittenSqls) {
-		nodeIndex := plan.RouteNodeIndexs[0]
-		nodeName := plan.Rule.Nodes[nodeIndex]
-		txSqls := []string{"begin;"}
-		txSqls = append(txSqls, plan.RewrittenSqls[nodeName]...)
-		txSqls = append(txSqls, "commit;")
-		plan.RewrittenSqls[nodeName] = txSqls
-	}
 
 	rs, err = c.executeInMultiNodes(conns, plan.RewrittenSqls, args)
-	c.closeShardConns(conns, err != nil)
 	if err == nil {
 		err = c.mergeExecResult(rs)
 	}

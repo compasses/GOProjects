@@ -27,22 +27,29 @@ password : kingshard
 
 #if set log_path, the sql log will write into log_path/sql.log,the system log
 #will write into log_path/sys.log
-log_path : /Users/flike/log
+#log_path : /Users/flike/log
 
 # log level[debug|info|warn|error],default error
 log_level : debug
 #if set log_sql(on|off) off,the sql log will not output
-log_sql: off 
+#log_sql: off 
+#only log the query that take more than slow_log_time ms
+#slow_log_time : 100
+# the path of blacklist sql file
+# all these sqls in the file will been forbidden by kingshard
+#blacklist_sql_file: /Users/flike/blacklist
 # only allow this ip list ip to connect kingshard
 #allow_ips: 127.0.0.1
+# the default charset of kingshard is utf8.
+#proxy_charset: utf8mb4
 
 # node is an agenda for real remote mysql server.
 nodes :
 - 
     name : node1 
 
-    # default max idle conns for mysql server
-    idle_conns : 16
+    # default max conns for mysql server
+    max_conns_limit : 8
 
     # all mysql in a node must have the same user and password
     user :  kingshard 
@@ -54,12 +61,12 @@ nodes :
     # slave represents a real mysql salve server,and the number after '@' is 
     # read load weight of this slave.
     slave : 
-    down_after_noalive : 100
+    down_after_noalive : 32
 - 
     name : node2 
 
-    # default max idle conns for mysql server
-    idle_conns : 16
+    # default max conns for mysql server
+    max_conns_limit : 8
 
     # all mysql in a node must have the same user and password
     user :  kingshard 
@@ -73,36 +80,29 @@ nodes :
 
     # down mysql after N seconds noalive
     # 0 will no down
-    down_after_noalive: 100
+    down_after_noalive: 32
 
-# schema defines which db can be used by client and this db's sql will be executed in which nodes
-schemas :
--
+# schema defines which db can be used by client and this db's sql will be executed in which nodes, the db is also the default database
+schema :
     db : kingshard
     nodes: [node1,node2]
-    rules:
-    		#all sqls that operate the unshard tables will send to the default node.
-        default: node1
-        shard:
-        -   
-            #shard table
-            table: test_shard_hash
-            #shard key
-            key: id
-            #shard node
-            nodes: [node1, node2]
-            #shard type
-            type: hash
-            #sub table counts,means that 4 sub tables in node1, and 4 sub-tables in node2.
-            locations: [4,4]
+    default: node1      
+    shard:
+    -   
+        table: test_shard_hash
+        key: id
+        nodes: [node1, node2]
+        type: hash
+        locations: [4,4]
 
-        -   
-            table: test_shard_range
-            key: id
-            type: range
-            nodes: [node1, node2]
-            locations: [4,4]
-            table_row_limit: 10000
+    -   
+        table: test_shard_range
+        key: id
+        type: range
+        nodes: [node1, node2]
+        locations: [4,4]
+        table_row_limit: 10000
+
 
 ```
 
@@ -116,11 +116,11 @@ schemas :
 
 ```
 1. Install Go
-2. git clone https://github.com/flike/kingshard.git src/github.com/flike/kingshard
-3. cd src/github.com/flike/kingshard
+2. git clone https://github.com/compasses/GOProjects/mysqlproxy.git src/github.com/compasses/GOProjects/mysqlproxy
+3. cd src/github.com/compasses/GOProjects/mysqlproxy
 4. source ./dev.sh
 5. make
-6. set the config file (etc/multi.yaml)
+6. set the config file (etc/ks.yaml)
 7. run kingshard (./bin/kingshard -config=etc/multi.yaml)
 ```
 
@@ -148,7 +148,7 @@ CREATE TABLE `test_shard_hash_0000` (
 
 ### 3.1.2 Insert and select opeation of sharding
 
-The select SQLs will be sent to a proper database or multi databases based on the conditions. The insert SQLs will only be sent to one database, if the insert operation accoss multi databases, kingshard will response error messages, because kingshard does not implemente distributed transactions. The SQLs as below:
+The select SQLs will be sent to a proper database or multi databases based on the conditions. The insert SQLs will also be sent to multi databases, if the insert operation accoss multi databases, kingshard will send the sqls to multi databases. The SQLs as below:
 
 ```
 mysql> insert into test_shard_hash(id,str,f,e,u,i) values(15,"flike",3.14,'test2',2,3);
@@ -461,8 +461,58 @@ mysql> admin server(opt,k,v) values('show','schema','config');
 +-----------+------------------+---------+------+--------------+-----------+---------------+
 3 rows in set (0.00 sec)
 
+#view the config of white list ip
+mysql> admin server(opt,k,v) values('show','allow_ip','config');
++--------------+
+| AllowIP      |
++--------------+
+| 127.0.0.1    |
+| 192.168.10.1 |
++--------------+
+2 rows in set (0.00 sec)
+
+#view the config of black list sql
+mysql> admin server(opt,k,v) values('show','black_sql','config');
++-------------------------------+
+| BlackListSql                  |
++-------------------------------+
+| select * from sbtest1         |
+| select * from sbtest1 limit ? |
++-------------------------------+
+2 rows in set (0.00 sec)
+
+```
+
+### 5.3 Change the config of kingshard
+
+```
+#turn off the sql log
+admin server(opt,k,v) values('change','log_sql','off')
+
+#turn on the sql log
+admin server(opt,k,v) values('change','log_sql','on')
+
+#change the threshold of slow log time
+admin server(opt,k,v) values('change','slow_log_time','50');
+
+#add white list ip
+admin server(opt,k,v) values('add','allow_ip','127.0.0.1');
+
+#delete white list ip
+admin server(opt,k,v) values('del','allow_ip','127.0.0.1');
+
+#add black list sql
+admin server(opt,k,v) values('add','black_sql','select count(*) from sbtest1')
+
+#delete black list sql
+admin server(opt,k,v) values('del','black_sql','select count(*) from sbtest1')
+
+#save config
+admin server(opt,k,v) values('save','proxy','config')
 ```
 
 ## 6.Requirement and feedback
 
 If You have new functional requirements about kingshard in the production environment, or find a bug in the process of using kingshard. Welcome to send a mail to `flikecn#126.com`, I will reply you as soon as possible.
+
+

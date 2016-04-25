@@ -4,7 +4,7 @@ export VTTOP=$(pwd)
 export VTROOT="${VTROOT:-${VTTOP/\/src\/github.com\/flike\/kingshard/}}"
 # VTTOP sanity check
 if [[ "$VTTOP" == "${VTTOP/\/src\/github.com\/flike\/kingshard/}" ]]; then
-  echo "WARNING: VTTOP($VTTOP) does not contain src/github.com/flike/kingshard"
+  echo "WARNING: VTTOP($VTTOP) does not contain src/github.com/compasses/GOProjects/mysqlproxy"
 fi
 
 export GOTOP=$VTTOP

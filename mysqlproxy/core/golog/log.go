@@ -1,3 +1,17 @@
+// Copyright 2016 The kingshard Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package golog
 
 import (
@@ -172,24 +186,24 @@ func (l *Logger) Output(callDepth int, level int, format string, v ...interface{
 	}
 
 	if l.flag&Lfile > 0 {
-	_, file, line, ok := runtime.Caller(callDepth)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		for i := len(file) - 1; i > 0; i-- {
-			if file[i] == '/' {
-				file = file[i+1:]
-				break
+		_, file, line, ok := runtime.Caller(callDepth)
+		if !ok {
+			file = "???"
+			line = 0
+		} else {
+			for i := len(file) - 1; i > 0; i-- {
+				if file[i] == '/' {
+					file = file[i+1:]
+					break
+				}
 			}
 		}
-	}
 
-	buf = append(buf, file...)
-	buf = append(buf, ":["...)
+		buf = append(buf, file...)
+		buf = append(buf, ":["...)
 
-	buf = strconv.AppendInt(buf, int64(line), 10)
-	buf = append(buf, "] - "...)
+		buf = strconv.AppendInt(buf, int64(line), 10)
+		buf = append(buf, "] - "...)
 	}
 
 	s := fmt.Sprintf(format, v...)
@@ -255,24 +269,6 @@ func OutputSql(state string, format string, v ...interface{}) {
 		buf = append(buf, " - "...)
 	}
 
-//	_, file, line, ok := runtime.Caller(3)
-//	if !ok {
-//		file = "???"
-//		line = 0
-//	} else {
-//		for i := len(file) - 1; i > 0; i-- {
-//			if file[i] == '/' {
-//				file = file[i+1:]
-//				break
-//			}
-//		}
-//	}
-
-//	buf = append(buf, file...)
-//	buf = append(buf, ":["...)
-
-//	buf = strconv.AppendInt(buf, int64(line), 10)
-//	buf = append(buf, "] - "...)
 	s := fmt.Sprintf(format, v...)
 
 	buf = append(buf, s...)

@@ -1,7 +1,20 @@
+// Copyright 2016 The kingshard Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package server
 
 import (
-	"time"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -9,10 +22,10 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/flike/kingshard/backend"
-	"github.com/flike/kingshard/core/golog"
-	"github.com/flike/kingshard/core/hack"
-	"github.com/flike/kingshard/mysql"
+	"github.com/compasses/GOProjects/mysqlproxy/backend"
+	"github.com/compasses/GOProjects/mysqlproxy/core/golog"
+	"github.com/compasses/GOProjects/mysqlproxy/core/hack"
+	"github.com/compasses/GOProjects/mysqlproxy/mysql"
 )
 
 //client <-> proxy
@@ -38,16 +51,13 @@ type ClientConn struct {
 
 	salt []byte
 
-	schema *Schema
-
 	txConns map[*backend.Node]*backend.BackendConn
 
 	closed bool
 
 	lastInsertId int64
 	affectedRows int64
-	resultLen	 int	
-	
+
 	stmtId uint32
 
 	stmts map[uint32]*Stmt //prepare相关,client端到proxy的stmt
@@ -66,7 +76,7 @@ func (c *ClientConn) IsAllowConnect() bool {
 	}
 	clientIP := net.ParseIP(clientHost)
 
-	ipVec := c.proxy.allowips
+	ipVec := c.proxy.allowips[c.proxy.allowipsIndex]
 	if ipVecLen := len(ipVec); ipVecLen == 0 {
 		return true
 	}
@@ -111,8 +121,6 @@ func (c *ClientConn) Handshake() error {
 }
 
 func (c *ClientConn) Close() error {
-	CloseConnect++;
-	
 	if c.closed {
 		return nil
 	}
@@ -176,9 +184,11 @@ func (c *ClientConn) readPacket() ([]byte, error) {
 }
 
 func (c *ClientConn) writePacket(data []byte) error {
-	c.resultLen += len(data)
-	
 	return c.pkg.WritePacket(data)
+}
+
+func (c *ClientConn) writePacketBatch(total, data []byte, direct bool) ([]byte, error) {
+	return c.pkg.WritePacketBatch(total, data, direct)
 }
 
 func (c *ClientConn) readHandshakeResponse() error {
@@ -206,6 +216,7 @@ func (c *ClientConn) readHandshakeResponse() error {
 
 	//user name
 	c.user = string(data[pos : pos+bytes.IndexByte(data[pos:], 0)])
+
 	pos += len(c.user) + 1
 
 	//auth length and auth
@@ -214,27 +225,32 @@ func (c *ClientConn) readHandshakeResponse() error {
 	auth := data[pos : pos+authLen]
 
 	checkAuth := mysql.CalcPassword(c.salt, []byte(c.proxy.cfg.Password))
-	if !bytes.Equal(auth, checkAuth) {
+	if c.user != c.proxy.cfg.User || !bytes.Equal(auth, checkAuth) {
 		golog.Error("ClientConn", "readHandshakeResponse", "error", 0,
 			"auth", auth,
 			"checkAuth", checkAuth,
+			"client_user", c.user,
+			"config_set_user", c.proxy.cfg.User,
 			"passworld", c.proxy.cfg.Password)
-		return mysql.NewDefaultError(mysql.ER_ACCESS_DENIED_ERROR, c.c.RemoteAddr().String(), c.user, "Yes")
+		return mysql.NewDefaultError(mysql.ER_ACCESS_DENIED_ERROR, c.user, c.c.RemoteAddr().String(), "Yes")
 	}
 
 	pos += authLen
 
+	var db string
 	if c.capability&mysql.CLIENT_CONNECT_WITH_DB > 0 {
 		if len(data[pos:]) == 0 {
 			return nil
 		}
 
-		db := string(data[pos : pos+bytes.IndexByte(data[pos:], 0)])
+		db = string(data[pos : pos+bytes.IndexByte(data[pos:], 0)])
 		pos += len(c.db) + 1
 
-		if err := c.useDB(db); err != nil {
-			return err
-		}
+	}
+
+	golog.Error("handshake ", "response", "db ", 0, db)
+	if err := c.useDB(db); err != nil {
+		return err
 	}
 
 	return nil
@@ -264,12 +280,11 @@ func (c *ClientConn) Run() {
 		}
 
 		if err := c.dispatch(data); err != nil {
+			c.proxy.counter.IncrErrLogTotal()
 			golog.Error("server", "Run",
 				err.Error(), c.connectionId,
 			)
-			if err != mysql.ErrBadConn {
-				c.writeError(err)
-			}
+			c.writeError(err)
 		}
 
 		if c.closed {
@@ -281,6 +296,7 @@ func (c *ClientConn) Run() {
 }
 
 func (c *ClientConn) dispatch(data []byte) error {
+	c.proxy.counter.IncrClientQPS()
 	cmd := data[0]
 	data = data[1:]
 
@@ -289,32 +305,7 @@ func (c *ClientConn) dispatch(data []byte) error {
 		c.Close()
 		return nil
 	case mysql.COM_QUERY:
-		now := time.Now()
-		sql := (hack.String)(data)
-		c.resultLen = 0;
-		err := c.handleQuery(sql)
-		elasped := time.Since(now)
-		
-		if stat, ok := RecordSql[sql]; ok {
-			stat.QueryCount++
-			stat.ResponseTime+=elasped
-			stat.ResultLen+=c.resultLen
-			if err != nil {
-				stat.ErrorNum++
-			}
-			RecordSql[sql] = stat
-		} else {
-			stat := SqlStat{}
-			stat.QueryCount++
-			stat.ResponseTime+=elasped
-			stat.ResultLen+=c.resultLen
-			if err != nil {
-				stat.ErrorNum++
-			}
-			RecordSql[sql] = stat
-		}
-		return err
-		
+		return c.handleQuery(hack.String(data))
 	case mysql.COM_PING:
 		return c.writeOK(nil)
 	case mysql.COM_INIT_DB:
@@ -335,8 +326,11 @@ func (c *ClientConn) dispatch(data []byte) error {
 		return c.handleStmtSendLongData(data)
 	case mysql.COM_STMT_RESET:
 		return c.handleStmtReset(data)
+	case mysql.COM_SET_OPTION:
+		return c.writeEOF(0)
 	default:
 		msg := fmt.Sprintf("command %d not supported now", cmd)
+		golog.Error("ClientConn", "dispatch", msg, 0)
 		return mysql.NewError(mysql.ER_UNKNOWN_ERROR, msg)
 	}
 
@@ -344,7 +338,23 @@ func (c *ClientConn) dispatch(data []byte) error {
 }
 
 func (c *ClientConn) useDB(db string) error {
-	c.db = db
+	// if c.schema == nil {
+	// 	return mysql.NewDefaultError(mysql.ER_NO_DB_ERROR)
+	// }
+	//
+	// nodeName := c.schema.rule.DefaultRule.Nodes[0]
+	//
+	// n := c.proxy.GetNode(nodeName)
+	// co, err := n.GetMasterConn()
+	// defer c.closeConn(co, false)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// if err = co.UseDB(db); err != nil {
+	// 	return err
+	// }
+	// c.db = db
 	return nil
 }
 
@@ -399,4 +409,16 @@ func (c *ClientConn) writeEOF(status uint16) error {
 	}
 
 	return c.writePacket(data)
+}
+
+func (c *ClientConn) writeEOFBatch(total []byte, status uint16, direct bool) ([]byte, error) {
+	data := make([]byte, 4, 9)
+
+	data = append(data, mysql.EOF_HEADER)
+	if c.capability&mysql.CLIENT_PROTOCOL_41 > 0 {
+		data = append(data, 0, 0)
+		data = append(data, byte(status), byte(status>>8))
+	}
+
+	return c.writePacketBatch(total, data, direct)
 }
