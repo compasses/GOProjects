@@ -1,10 +1,11 @@
 package offline
 
 import (
-	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
 )
 
 func Logger(inner httprouter.Handle, name string) httprouter.Handle {
@@ -17,6 +18,7 @@ func Logger(inner httprouter.Handle, name string) httprouter.Handle {
 		)
 		start := time.Now()
 		//time.Sleep(time.Millisecond * 1000)
+
 		inner(w, r, ps)
 
 		log.Printf(
@@ -32,6 +34,7 @@ func Logger(inner httprouter.Handle, name string) httprouter.Handle {
 func LoggerNotFound(inner http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+
 		inner.ServeHTTP(w, r)
 
 		log.Printf(

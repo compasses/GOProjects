@@ -110,6 +110,7 @@ type CartItems struct {
 	LineTotal          interface{} `json:"lineTotal"`
 	LineTotalAfterDisc interface{} `json:"lineTotalAfterDisc"`
 	StandardPrice      interface{} `json:"standardPrice"`
+	Remark             interface{} `json:"remark"`
 }
 
 type ShoppingCart struct {

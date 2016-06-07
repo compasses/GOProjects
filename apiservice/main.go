@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/Compasses/GOProjects/apiservice/offline"
-	"github.com/Compasses/GOProjects/apiservice/online"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/Compasses/GOProjects/apiservice/offline"
+	"github.com/Compasses/GOProjects/apiservice/online"
 )
 
 type config struct {
@@ -17,7 +18,7 @@ type config struct {
 	RemoteServer string
 	ListenOn     string
 	LogFile      string
-	GrabIF		 string
+	GrabIF       string
 }
 
 var GlobalServerStatus int64 = 0
@@ -89,7 +90,8 @@ func main() {
 	log.Println("Begin API LOG------------------------")
 	if GlobalConfig.RunMode == "offline" {
 		log.Println("API Run in offline mode...")
-		router := offline.ServerRouter()
+		//router := offline.ServerRouter()
+		router := offline.NewMiddleware()
 		RunDefaultServer(router)
 	} else {
 		log.Println("API Run in online mode...")

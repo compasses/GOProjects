@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/Compasses/bolt"
+	"github.com/boltdb/bolt"
 )
 
 var GlobalDB *bolt.DB
@@ -408,7 +408,7 @@ func RepoGetCustomer(channelAccountId TableId) interface{} {
 		"membershipId":          nil,
 		"membershipSwitchOn":    false,
 		"membershipTotalEarn":   0,
-		"mobile":                nil,
+		"mobile":                1588888888,
 		"ownerCode":             1,
 		"ownerDisplayName":      "ERP SUITE",
 		"phone":                 "12121212",

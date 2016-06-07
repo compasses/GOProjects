@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Compasses/bolt"
+	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -120,6 +120,7 @@ func Checkout(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		HandleError(err)
 	}
+	log.Println("CheckoutShoppingCart req: ", result)
 
 	resp := RepoCheckoutShoppingCart(result.ShoppingCart)
 	log.Println("CheckoutShoppingCart resp: ", resp)
