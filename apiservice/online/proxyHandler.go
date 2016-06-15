@@ -88,10 +88,11 @@ func (proxy *ProxyRoute) doReq(NeedLog bool, path, method, requestBody string, n
 		LogOutPut(NeedLog, "Get response : ")
 		ResponseFormat(NeedLog, resp, string(res))
 
-		err = proxy.db.StoreRequest(path, method, requestBody, string(res))
+		err = proxy.db.StoreRequest(path, method, requestBody, string(res), resp.StatusCode)
 		if err != nil {
 			log.Println("Store data failed ", err)
 		}
+		//proxy.db.SerilizeToFile()
 	}
 	return
 }
@@ -111,19 +112,19 @@ func (proxy *ProxyRoute) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	LogOutPut(NeedLog, "New Request: ")
 	RequstFormat(NeedLog, newRq, string(newbody))
-
-	res, err := proxy.db.GetResponse(path[0], req.Method, string(newbody))
-	if err != nil || len(res) == 0 {
-		log.Println("Cannot get response from replaydb ", err)
-		resphttp, res := proxy.doReq(NeedLog, path[0], req.Method, string(newbody), newRq)
-		for key, _ := range resphttp.Header {
-			w.Header().Set(key, strings.Join(resphttp.Header[key], ";"))
-		}
-
-		w.Write(res)
-	} else {
-		log.Println("Get response from replaydb ", string(res))
-		w.Write(res)
+	resphttp, res := proxy.doReq(NeedLog, path[0], req.Method, string(newbody), newRq)
+	for key, _ := range resphttp.Header {
+		w.Header().Set(key, strings.Join(resphttp.Header[key], ";"))
 	}
+
+	w.Write(res)
+	// res, err := proxy.db.GetResponse(path[0], req.Method, string(newbody))
+	// if err != nil || len(res) == 0 {
+	// 	log.Println("Cannot get response from replaydb ", err)
+	//
+	// } else {
+	// 	log.Println("Get response from replaydb ", string(res))
+	// 	w.Write(res)
+	// }
 
 }

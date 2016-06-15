@@ -1,0 +1,30 @@
+{
+    "paths": {
+      "/mytest/onget": {
+          "POST": [
+              {
+                  "request": {
+                      "goodstart": 10000
+                  },
+                  "response": {
+                      "200": {
+                          "promotions": 20000
+                      }
+                  }
+              }
+          ],
+          "GET":[
+            {
+              "request":null,
+              "response":{
+                "200":{
+                   "defaultBillToAddress": null,
+                   "defaultShipToAddress": null,
+                   "displayName": "Ddd"
+                }
+              }
+            }
+          ]
+      }
+    }
+  }

@@ -7,13 +7,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/franela/goreq"
-	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/franela/goreq"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func TestBytesToInt(t *testing.T) {
@@ -93,7 +94,7 @@ func TestHttpGet(t *testing.T) {
 		DisableCompression: true,
 	}
 	client := &http.Client{Transport: tr}
-	resp, err := client.Get("https://cnpvgvb1ep052.pvgl.sap.corp:29900")
+	resp, err := client.Get("https://www.baidu.com")
 	fmt.Println("err is ", err)
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
