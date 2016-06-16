@@ -1,6 +1,6 @@
 {
     "paths": {
-      "/mytest/onget": {
+      "/path/to/template": {
           "POST": [
               {
                   "request": {
@@ -8,7 +8,7 @@
                   },
                   "response": {
                       "200": {
-                          "promotions": 20000
+                          "success": 20000
                       }
                   }
               }

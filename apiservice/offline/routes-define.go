@@ -104,4 +104,16 @@ var routes = Routes{
 		"/backupDB",
 		BackupDB,
 	},
+	// Route{
+	// 	"GeneratePACT",
+	// 	"GET",
+	// 	"/pact",
+	// 	GeneratePACT,
+	// },
+	// Route{
+	// 	"GenerateJSON",
+	// 	"GET",
+	// 	"/json",
+	// 	GenerateJSON,
+	// },
 }

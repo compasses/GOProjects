@@ -3,6 +3,7 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 
 	"github.com/Compasses/GOProjects/apiservice/utils"
@@ -94,8 +95,8 @@ func (replay *ReplayDB) Close() {
 	}
 }
 
-func (replay *ReplayDB) SerilizeToFile() {
-	outmap := make(map[string]map[string][]interface{})
+func (replay *ReplayDB) GetJSONMap() (outmap map[string]map[string][]interface{}) {
+	outmap = make(map[string]map[string][]interface{})
 
 	replay.db.View(func(tx *bolt.Tx) error {
 		cur := tx.Cursor()
@@ -143,20 +144,24 @@ func (replay *ReplayDB) SerilizeToFile() {
 				}
 			}
 		}
-
-		result := map[string]interface{}{
-			"paths": outmap,
-		}
-
-		jsonStr, err := json.MarshalIndent(result, "", "    ")
-
-		if err != nil {
-			fmt.Println(err)
-
-		} else {
-			fmt.Println(string(jsonStr))
-		}
-
 		return nil
 	})
+	return
+}
+
+func (replay *ReplayDB) SerilizeToFile() (filename string) {
+	filename = "./single.json"
+	outmap := replay.GetJSONMap()
+
+	result := map[string]interface{}{
+		"paths": outmap,
+	}
+
+	jsonStr, err := json.MarshalIndent(result, "", "    ")
+
+	err = ioutil.WriteFile(filename, jsonStr, 0666)
+	if err != nil {
+		log.Println(err)
+	}
+	return
 }

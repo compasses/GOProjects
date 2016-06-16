@@ -15,7 +15,7 @@ func (replay *ReplayDB) ReadJsonFiles(filePath string) {
 	fmt.Println("going to read file", filePath)
 	stream, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("going to read ", err, stream)
+		fmt.Println("going to read file error happened ", err, stream)
 		return
 	}
 
@@ -48,15 +48,14 @@ func (replay *ReplayDB) ReadJsonFiles(filePath string) {
 			}
 		}
 	}
-
 	fmt.Println("Time Used:", time.Since(now))
-
 }
 
 func (replay *ReplayDB) ReadDir(dir string) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 
 	for _, file := range files {

@@ -33,7 +33,6 @@ func GetConfiguration() error {
 		log.Println("Just run in offline mode")
 		return err
 	}
-
 	var conf config
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -44,13 +43,11 @@ func GetConfiguration() error {
 		json.Unmarshal(data, &conf)
 		log.Println("get configuration:", string(data))
 	}
-
 	GlobalConfig = conf
 	return nil
 }
 
 func RunDefaultServer(handler http.Handler) {
-
 	log.Println("Listen ON: ", GlobalConfig.ListenOn)
 	if GlobalConfig.TLS == "on" {
 		log.Fatal(http.ListenAndServeTLS(GlobalConfig.ListenOn, "cert.pem", "key.pem", handler))
@@ -59,7 +56,7 @@ func RunDefaultServer(handler http.Handler) {
 	}
 }
 
-func main() {
+func StartServer() {
 	err := GetConfiguration()
 
 	if err != nil {
@@ -90,7 +87,6 @@ func main() {
 	log.Println("Begin API LOG------------------------")
 	if GlobalConfig.RunMode == "offline" {
 		log.Println("API Run in offline mode...")
-		//router := offline.ServerRouter()
 		router := offline.NewMiddleware()
 		RunDefaultServer(router)
 	} else {
@@ -98,4 +94,15 @@ func main() {
 		proxy := online.NewProxyHandler(GlobalConfig.RemoteServer, GlobalConfig.GrabIF)
 		RunDefaultServer(proxy)
 	}
+}
+
+const banner string = `
+
+			Mock Server
+
+`
+
+func main() {
+	log.Println(banner)
+	StartServer()
 }

@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/Compasses/GOProjects/apiservice/db"
 	"github.com/Compasses/GOProjects/apiservice/utils"
+	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -27,7 +30,9 @@ func NewMiddleware() *offlinemiddleware {
 	if err != nil {
 		log.Println("Open replayDB error ", err)
 	}
+
 	//db.SerilizeToFile()
+
 	for _, route := range routes {
 		httpHandle := Logger(route.HandleFunc, route.Name)
 
@@ -39,10 +44,51 @@ func NewMiddleware() *offlinemiddleware {
 	}
 
 	router.NotFound = LoggerNotFound(NotFoundHandler)
-
+	GlobalDB, err = bolt.Open("./OfflineDB", 0666, nil)
+	if err != nil {
+		log.Println("Open OfflineDB error ", err)
+	}
 	return &offlinemiddleware{
 		router:   router,
 		replaydb: db,
+	}
+}
+
+func (middleware *offlinemiddleware) returnFile(w http.ResponseWriter, filename, attachName string) {
+	f, err := os.Open(filename)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	fileInfo, err := f.Stat()
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename=`+attachName)
+	w.Header().Set("Content-Length", strconv.Itoa(int(fileInfo.Size())))
+	io.Copy(w, f)
+}
+
+func (middleware *offlinemiddleware) GenerateJSON(w http.ResponseWriter) {
+	middleware.replaydb.ReadDir("./input")
+	filename := middleware.replaydb.SerilizeToFile()
+	middleware.returnFile(w, filename, "JSONFile.json")
+}
+
+func (middleware *offlinemiddleware) GeneratePACT(w http.ResponseWriter) {
+	middleware.replaydb.ReadDir("./input")
+	middleware.GenPactWithProvider()
+	pactfile := middleware.GetPactFile()
+	if len(pactfile) > 0 {
+		middleware.returnFile(w, pactfile, "ConsumerContracts.json")
+	} else {
+		log.Println("No Pact File Generate ")
+		w.Write([]byte("No Pact File Generate "))
 	}
 }
 
@@ -50,7 +96,16 @@ func (middleware *offlinemiddleware) ServeHTTP(w http.ResponseWriter, req *http.
 	newbody := make([]byte, req.ContentLength)
 	req.Body.Read(newbody)
 	path := strings.Split(req.RequestURI, "?")
+
 	fmt.Println("try to get ", path[0], req.Method, string(newbody))
+	if path[0] == "/json" {
+		middleware.GenerateJSON(w)
+		return
+	} else if path[0] == "/pact" {
+		middleware.GeneratePACT(w)
+		return
+	}
+
 	res, err := middleware.replaydb.GetResponse(path[0], req.Method, string(newbody))
 	if err != nil || res == nil {
 		log.Println("Cannot get response from replaydb on offline mode, need hanle in offline handler ", err)

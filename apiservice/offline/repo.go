@@ -642,25 +642,3 @@ func RepoGetCustomerAddress(customerId TableId) (result interface{}) {
 	})
 	return
 }
-
-func init() {
-	//	if GlobalConfig.RunMode != "offline" {
-	//	}
-	var err error
-	GlobalDB, err = bolt.Open("./EshopOfflineServerDB", 0666, nil)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("DB Path: ", GlobalDB.Path())
-	//	go func() {
-	//		prev := GlobalDB.Stats()
-	//		for {
-	//			time.Sleep(10 * time.Second)
-
-	//			states := GlobalDB.Stats()
-	//			diff := states.Sub(&prev)
-	//			//json.NewEncoder(os.Stderr).Encode(diff)
-	//			prev = states
-	//		}
-	//	}()
-}
