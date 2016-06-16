@@ -3,13 +3,15 @@
       "/path/to/template": {
           "POST": [
               {
-                  "request": {
-                      "goodstart": 10000
+                  "request":{
+                      "goodstart": "10000"
                   },
-                  "response": {
-                      "200": {
-                          "success": 20000
-                      }
+                  "response":{
+                    "200":{
+                       "defaultBillToAddress": null,
+                       "defaultShipToAddress": null,
+                       "displayName": "Ddd"
+                    }
                   }
               }
           ],

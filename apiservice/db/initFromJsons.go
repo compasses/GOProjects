@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -12,10 +11,10 @@ import (
 
 func (replay *ReplayDB) ReadJsonFiles(filePath string) {
 	now := time.Now()
-	fmt.Println("going to read file", filePath)
+	log.Println("going to read file", filePath)
 	stream, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("going to read file error happened ", err, stream)
+		log.Println("going to read file error happened ", err, stream)
 		return
 	}
 
@@ -30,12 +29,12 @@ func (replay *ReplayDB) ReadJsonFiles(filePath string) {
 				detailMapItem := detailMapel.(map[string]interface{})
 				request, ok := detailMapItem["request"]
 				if !ok {
-					fmt.Println("missing request, continue ", detailMapItem)
+					log.Println("missing request, continue ", detailMapItem)
 					continue
 				}
 				respose, ok := detailMapItem["response"]
 				if !ok {
-					fmt.Println("missing response, continue ", detailMapItem)
+					log.Println("missing response, continue ", detailMapItem)
 					continue
 				}
 				responseMap := respose.(map[string]interface{})
@@ -48,7 +47,7 @@ func (replay *ReplayDB) ReadJsonFiles(filePath string) {
 			}
 		}
 	}
-	fmt.Println("Time Used:", time.Since(now))
+	log.Println("Time Used:", time.Since(now))
 }
 
 func (replay *ReplayDB) ReadDir(dir string) {
@@ -59,7 +58,6 @@ func (replay *ReplayDB) ReadDir(dir string) {
 	}
 
 	for _, file := range files {
-		fmt.Println(file.Name())
 		replay.ReadJsonFiles(dir + "/" + file.Name())
 	}
 }

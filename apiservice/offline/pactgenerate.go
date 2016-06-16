@@ -2,7 +2,6 @@ package offline
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,11 +19,13 @@ type ProviderAPIClient struct {
 	baseURL string
 }
 
-func (c *ProviderAPIClient) ClientRun(method, path string, reqBody []byte) error {
+func (c *ProviderAPIClient) ClientRun(method, path string, reqBody interface{}) error {
 	url := fmt.Sprintf("%s%s", c.baseURL, path)
-	newbody := make([]byte, len(reqBody))
+	reqb := utils.JsonInterfaceToByte(reqBody)
 
-	req, err := http.NewRequest(method, url, ioutil.NopCloser(bytes.NewReader(newbody)))
+	log.Println("going to verify: ", url+" "+method)
+
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(reqb))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -39,12 +40,12 @@ func (c *ProviderAPIClient) ClientRun(method, path string, reqBody []byte) error
 	}
 	defer resp.Body.Close()
 
-	var res interface{}
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&res); err != nil {
-		log.Println(err)
+	res, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("ioutil read err ", err, " body", string(res))
 		return err
 	}
+	//log.Println("Got response: ", string(res))
 
 	return nil
 }
@@ -70,38 +71,47 @@ func (middleware *offlinemiddleware) buildPact(consumerName, providerName string
 		HasPactWith(providerName)
 }
 
-func (middleware *offlinemiddleware) RunPact(ms pact.ProviderService, path, method string, reqBody, respBody interface{}, statusCode int,
-	consumerName, providerName, msUrl string) {
-	req := utils.JsonInterfaceToByte(reqBody)
+func (middleware *offlinemiddleware) RunPact(builder pact.Builder, path, method string, reqBody, respBody interface{}, statusCode int,
+	consumerName, providerName string) {
+	ms, msUrl := builder.GetMockProviderService()
 
 	request := provider.NewJSONRequest(method, path, "", nil)
-	request.SetBody(reqBody)
+	if reqBody != nil {
+		err := request.SetBody(reqBody)
+		if err != nil {
+			log.Println("Set request error ", err, " reqBody ", respBody)
+		}
+	}
 
 	header := make(http.Header)
 	header.Add("content-type", "application/json")
 	response := provider.NewJSONResponse(statusCode, header)
-	response.SetBody(respBody)
+	if respBody != nil {
+		err := response.SetBody(respBody)
+		if err != nil {
+			log.Println("Set Response error ", err, " respBody ", respBody)
+		}
+	}
 
 	//Register interaction for this test scope
 	if err := ms.Given(consumerName).
 		UponReceiving(providerName).
 		With(*request).
 		WillRespondWith(*response); err != nil {
-		fmt.Println(err)
-		//t.FailNow()
+		log.Println(err)
 	}
+
+	//log.Println("Register: ", " Request ", string(req), " response ", respBody)
 
 	//test
 	client := &ProviderAPIClient{baseURL: msUrl}
-	if err := client.ClientRun(method, path, req); err != nil {
+	if err := client.ClientRun(method, path, reqBody); err != nil {
 		log.Println(err)
-		//t.FailNow()
 	}
 
 	//Verify registered interaction
 	if err := ms.VerifyInteractions(); err != nil {
 		log.Println(err)
-		//t.FailNow()
 	}
 
 	//Clear interaction for this test scope, if you need to register and verify another interaction for another test scope
@@ -110,7 +120,6 @@ func (middleware *offlinemiddleware) RunPact(ms pact.ProviderService, path, meth
 
 func (middleware *offlinemiddleware) GenPactWithProvider() {
 	builder := middleware.buildPact("EShop Online Store", "EShop Adaptor")
-	ms, msUrl := builder.GetMockProviderService()
 	//map[string]map[string][]interface{}
 	//"Path", "Method", "[req..., rsp...,]"
 	interactMap := middleware.replaydb.GetJSONMap()
@@ -136,8 +145,8 @@ func (middleware *offlinemiddleware) GenPactWithProvider() {
 					//fmt.Println("\r\nstore:", request, "response", v)
 					consumName := "mock server for " + path + " method " + method + " " + strconv.Itoa(count)
 					provideName := "pact contract for " + path + " method " + method + " " + strconv.Itoa(count)
-					middleware.RunPact(ms, path, method, request, v, status, consumName,
-						provideName, msUrl)
+					middleware.RunPact(builder, path, method, request, v, status, consumName,
+						provideName)
 					count++
 					break
 				}

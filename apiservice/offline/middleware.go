@@ -31,8 +31,6 @@ func NewMiddleware() *offlinemiddleware {
 		log.Println("Open replayDB error ", err)
 	}
 
-	//db.SerilizeToFile()
-
 	for _, route := range routes {
 		httpHandle := Logger(route.HandleFunc, route.Name)
 
@@ -72,6 +70,11 @@ func (middleware *offlinemiddleware) returnFile(w http.ResponseWriter, filename,
 	w.Header().Set("Content-Disposition", `attachment; filename=`+attachName)
 	w.Header().Set("Content-Length", strconv.Itoa(int(fileInfo.Size())))
 	io.Copy(w, f)
+}
+
+func (middleware *offlinemiddleware) TestPactGen() {
+	middleware.replaydb.ReadDir("./input")
+	middleware.GenPactWithProvider()
 }
 
 func (middleware *offlinemiddleware) GenerateJSON(w http.ResponseWriter) {
