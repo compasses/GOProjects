@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"testing"
 
 	"github.com/Compasses/GOProjects/apiservice/utils"
 	"github.com/SEEK-Jobs/pact-go"
@@ -22,11 +21,12 @@ type ProviderAPIClient struct {
 }
 
 func (c *ProviderAPIClient) ClientRun(method, path string, reqBody []byte) error {
-	url := fmt.Sprintf("%s/%s", c.baseURL, path)
+	url := fmt.Sprintf("%s%s", c.baseURL, path)
 	newbody := make([]byte, len(reqBody))
 
 	req, err := http.NewRequest(method, url, ioutil.NopCloser(bytes.NewReader(newbody)))
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -34,6 +34,7 @@ func (c *ProviderAPIClient) ClientRun(method, path string, reqBody []byte) error
 	resp, err := client.Do(req)
 
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -41,6 +42,7 @@ func (c *ProviderAPIClient) ClientRun(method, path string, reqBody []byte) error
 	var res interface{}
 	decoder := json.NewDecoder(resp.Body)
 	if err := decoder.Decode(&res); err != nil {
+		log.Println(err)
 		return err
 	}
 
@@ -91,14 +93,14 @@ func (middleware *offlinemiddleware) RunPact(ms pact.ProviderService, path, meth
 
 	//test
 	client := &ProviderAPIClient{baseURL: msUrl}
-	if err := client.ClientRun(path, method, req); err != nil {
-		fmt.Println(err)
+	if err := client.ClientRun(method, path, req); err != nil {
+		log.Println(err)
 		//t.FailNow()
 	}
 
 	//Verify registered interaction
 	if err := ms.VerifyInteractions(); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		//t.FailNow()
 	}
 
@@ -107,7 +109,6 @@ func (middleware *offlinemiddleware) RunPact(ms pact.ProviderService, path, meth
 }
 
 func (middleware *offlinemiddleware) GenPactWithProvider() {
-	t := new(testing.T)
 	builder := middleware.buildPact("EShop Online Store", "EShop Adaptor")
 	ms, msUrl := builder.GetMockProviderService()
 	//map[string]map[string][]interface{}
@@ -115,23 +116,29 @@ func (middleware *offlinemiddleware) GenPactWithProvider() {
 	interactMap := middleware.replaydb.GetJSONMap()
 	for path, value := range interactMap {
 		for method, interacts := range value {
+			var count int = 0
 			for _, detailMapel := range interacts {
 				detailMapItem := detailMapel.(map[string]interface{})
 				request, ok := detailMapItem["request"]
 				if !ok {
-					fmt.Println("missing request, continue ", detailMapItem)
+					log.Println("missing request, continue ", detailMapItem)
 					continue
 				}
 				respose, ok := detailMapItem["response"]
 				if !ok {
-					fmt.Println("missing response, continue ", detailMapItem)
+					log.Println("missing response, continue ", detailMapItem)
 					continue
 				}
 				responseMap := respose.(map[string]interface{})
+				count++
 				for k, v := range responseMap {
 					status, _ := strconv.Atoi(k)
 					//fmt.Println("\r\nstore:", request, "response", v)
-					middleware.RunPact(ms, path, method, request, v, status, "from mock server for "+path, "pact contract for "+path, msUrl)
+					consumName := "mock server for " + path + " method " + method + " " + strconv.Itoa(count)
+					provideName := "pact contract for " + path + " method " + method + " " + strconv.Itoa(count)
+					middleware.RunPact(ms, path, method, request, v, status, consumName,
+						provideName, msUrl)
+					count++
 					break
 				}
 			}
@@ -140,6 +147,6 @@ func (middleware *offlinemiddleware) GenPactWithProvider() {
 
 	//Finally, build to produce the pact json file
 	if err := builder.Build(); err != nil {
-		t.Error(err)
+		log.Println(err)
 	}
 }
