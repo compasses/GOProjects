@@ -104,5 +104,7 @@ const banner string = `
 
 func main() {
 	log.Println(banner)
+	// router := offline.NewMiddleware()
+	// router.TestTruncate()
 	StartServer()
 }

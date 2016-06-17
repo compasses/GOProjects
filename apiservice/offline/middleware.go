@@ -72,6 +72,39 @@ func (middleware *offlinemiddleware) returnFile(w http.ResponseWriter, filename,
 	io.Copy(w, f)
 }
 
+func (middleware *offlinemiddleware) TestTruncate() {
+	dbFile := middleware.replaydb.GetDBFilePath()
+	middleware.replaydb.Close()
+	fmt.Println("DB file ", dbFile)
+	db, err := os.OpenFile(dbFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		fmt.Println("OPen error ", err)
+	}
+	err = db.Truncate(0)
+	if err != nil {
+		fmt.Println("Truncate error ", err)
+	}
+}
+
+func (middleware *offlinemiddleware) Truncate(w http.ResponseWriter) {
+	dbFile := middleware.replaydb.GetDBFilePath()
+	middleware.replaydb.Close()
+	db, err := os.OpenFile(dbFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		log.Println("OPen error ", err)
+	}
+	err = db.Truncate(0)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		log.Println("Truncate error ", err)
+	}
+	w.WriteHeader(200)
+	w.Write([]byte("<h1>Truncate successful</h1>"))
+}
+
 func (middleware *offlinemiddleware) TestPactGen() {
 	middleware.replaydb.ReadDir("./input")
 	middleware.GenPactWithProvider()
@@ -100,12 +133,15 @@ func (middleware *offlinemiddleware) ServeHTTP(w http.ResponseWriter, req *http.
 	req.Body.Read(newbody)
 	path := strings.Split(req.RequestURI, "?")
 
-	fmt.Println("try to get ", path[0], req.Method, string(newbody))
+	log.Println("try to get ", path[0], req.Method, string(newbody))
 	if path[0] == "/json" {
 		middleware.GenerateJSON(w)
 		return
 	} else if path[0] == "/pact" {
 		middleware.GeneratePACT(w)
+		return
+	} else if path[0] == "/truncate" {
+		middleware.Truncate(w)
 		return
 	}
 

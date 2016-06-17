@@ -24,6 +24,10 @@ func NewReplayDB() (*ReplayDB, error) {
 	return &ReplayDB{db: dbopen, reqRspKey: "|"}, nil
 }
 
+func (replay *ReplayDB) GetDBFilePath() string {
+	return replay.db.Path()
+}
+
 func (replay *ReplayDB) StoreRequestFromJson(path, method string, reqBody, respBody interface{}, statusCode int) {
 	req := utils.JsonInterfaceToByte(reqBody)
 	rsp := utils.JsonInterfaceToByte(respBody)
@@ -92,6 +96,14 @@ func (replay *ReplayDB) Close() {
 	err := replay.db.Close()
 	if err != nil {
 		fmt.Println("Close error:", err)
+	}
+}
+
+func (replay *ReplayDB) Open(path string) {
+	db, err := bolt.Open(path, 0600, nil)
+	replay.db = db
+	if err != nil {
+		log.Println("Open DB error:", err)
 	}
 }
 
