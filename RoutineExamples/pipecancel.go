@@ -7,7 +7,7 @@ import (
 )
 
 //first stage generate numbers
-func gen(nums ...int) <-chan int {
+func gen1(nums ...int) <-chan int {
 	out := make(chan int)
 	go func() {
 		for _, n := range nums {
@@ -19,7 +19,7 @@ func gen(nums ...int) <-chan int {
 }
 
 //second stage output the square number
-func sq(in <-chan int) <-chan int {
+func sq1(in <-chan int) <-chan int {
 	out := make(chan int)
 	go func() {
 		for n := range in {
@@ -33,7 +33,7 @@ func sq(in <-chan int) <-chan int {
 //merge function converts a list of channels to a single channel by starting a goroutine for each
 //inbound channel that copies the values to the sole outbound channel. once all the output goroutine have been started
 //merge starts one more goroutine to close the outbound channel after all sends that channel are done.
-func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {
+func merge1(done <-chan struct{}, cs ...<-chan int) <-chan int {
 	var wg sync.WaitGroup
 	out := make(chan int)
 
@@ -63,15 +63,15 @@ func merge(done <-chan struct{}, cs ...<-chan int) <-chan int {
 }
 
 func main() {
-	in := gen(2, 3)
+	in := gen1(2, 3)
 
 	// Distribute the sq work across two goroutines that both read from in.
-	c1 := sq(in)
-	c2 := sq(in)
+	c1 := sq1(in)
+	c2 := sq1(in)
 
 	// Consume the first value from output.
 	done := make(chan struct{}, 2)
 	defer close(done)
-	out := merge(done, c1, c2)
+	out := merge1(done, c1, c2)
 	fmt.Println(<-out) // 4 or 9
 }
