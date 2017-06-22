@@ -85,7 +85,7 @@ func (c *gobServerCodec) WriteResponse(r *rpc.Response, body interface{}) (err e
 
 func startRPC() {
 	rpc.Register(NewWorker())
-	l, e := net.Listen("tcp", "9091")
+	l, e := net.Listen("tcp", ":9091")
 	if e != nil {
 		log.Fatal("Error: listen failed: ", e)
 	}
