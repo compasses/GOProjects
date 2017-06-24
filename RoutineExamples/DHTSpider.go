@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/juju/errors"
 	"github.com/zeebo/bencode"
 	"io"
 	"log"
@@ -16,6 +15,7 @@ import (
 	"time"
 	"sync/atomic"
 	"math"
+	"errors"
 )
 
 // refer :https://github.com/jyootai/DhtBT/
