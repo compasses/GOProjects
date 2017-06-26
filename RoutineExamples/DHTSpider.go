@@ -184,12 +184,12 @@ func (krpc *KRPC) DecodePackage(data string, addr *net.UDPAddr) error {
 	} else {
 		var ok bool
 		msg := new(KRPCMSG)
-		msg.T, ok = val['t'].(string)
+		msg.T, ok = val["t"].(string)
 		if !ok {
 			err = errors.New("Do not have transaction ID")
 			return err
 		}
-		msg.Y, ok = val['y'].(string)
+		msg.Y, ok = val["y"].(string)
 		if !ok {
 			err = errors.New("Do know message type ")
 			return err
@@ -349,8 +349,8 @@ func convertIPPort(buf *bytes.Buffer, ip net.IP, port int) {
 
 func (krpc *KRPC) EncodingNodeResult(tid string, token string, nodes []byte) (string, error) {
 	v := make(map[string]interface{})
-	v['t'] = tid
-	v['y'] = "r"
+	v["t"] = tid
+	v["y"] = "r"
 
 	args := make(map[string]string)
 	args["id"] = krpc.dhtNode.node.id.String()
@@ -381,7 +381,7 @@ func OutHash(master chan string) {
 }
 
 func main() {
-	cpu := runtime.NumCPU()
+	cpu := 1//runtime.NumCPU()
 	fmt.Println("Number CPU is ", cpu)
 	runtime.GOMAXPROCS(cpu)
 	master := make(chan string)
@@ -393,7 +393,7 @@ func main() {
 	OutHash(master)
 }
 
-func NewDHTNode(master chan string, logger *io.Writer) *KNode {
+func NewDHTNode(master chan string, logger io.Writer) *KNode {
 	dhtNode := new(KNode)
 	dhtNode.log = log.New(logger, "DHT_TEST", log.Ldate|log.Ltime|log.Lshortfile|log.Lmicroseconds)
 	dhtNode.node = NewNodeInfo()
