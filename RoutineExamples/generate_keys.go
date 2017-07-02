@@ -141,6 +141,7 @@ func Generate(certPath, keyPath, host string) error {
 		Subject: pkix.Name{
 			Organization: []string{"Jet He"},
 		},
+		SignatureAlgorithm:x509.ECDSAWithSHA256,
 		NotBefore:             startValid,
 		NotAfter:              validEnd,
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,

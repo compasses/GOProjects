@@ -22,9 +22,10 @@ import (
 
 var BOOTSTRAP []string = []string{
 	"67.215.246.10:6881",  //router.bittorrent.com
-	"91.121.59.153:6881",  //dht.transmissionbt.com
-	"82.221.103.244:6881", //router.utorrent.com
-	"212.129.33.50:6881"}
+	//"91.121.59.153:6881",  //dht.transmissionbt.com
+	//"82.221.103.244:6881", //router.utorrent.com
+	//"212.129.33.50:6881",
+}
 
 type Id []byte
 
@@ -381,8 +382,9 @@ func OutHash(master chan string) {
 }
 
 func main() {
-	cpu := 1//runtime.NumCPU()
+	cpu := runtime.NumCPU()
 	fmt.Println("Number CPU is ", cpu)
+	cpu = 1
 	runtime.GOMAXPROCS(cpu)
 	master := make(chan string)
 
