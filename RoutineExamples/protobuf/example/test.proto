@@ -1,0 +1,31 @@
+    syntax="proto2";
+
+	enum FOO { X = 17; };
+
+	message Test {
+	  required string label = 1;
+	  optional int32 type = 2 [default=77];
+	  repeated int64 reps = 3;
+	  optional group OptionalGroup = 4 {
+	    required string RequiredField = 5;
+	  }
+	}
+
+    message Person{
+        required string name = 1;
+        required int32 id = 2;
+        required string email = 3;
+        enum PhoneType{
+            MOBILE = 0;
+            HOME=1;
+            WORK=2;
+    }
+
+    message PhoneNumber{
+        required string number=1;
+        optional PhoneType type=2;
+    }
+    repeated PhoneNumber phones=4;
+
+    }
+
