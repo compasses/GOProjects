@@ -6,7 +6,7 @@ import (
 )
 
 
-var dbpath string = "/Users/jet/Library/Ethereum/geth/chaindata"
+var dbpath string = "/Users/jet/Library/Ethereum/testnet/geth/chaindata"
 
 
 func readBlock() {
