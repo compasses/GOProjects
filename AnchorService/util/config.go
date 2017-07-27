@@ -15,6 +15,7 @@ type AnchorServiceCfg struct {
 	Anchor struct {
 		ServerECKey         string
 		AnchorChainID       string
+		SigKey              string
 		ConfirmationsNeeded int
 	}
 	Btc struct {
