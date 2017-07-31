@@ -1,30 +1,25 @@
-package service
+package anchor
 
 import (
+	"AnchorService/common"
+	"AnchorService/util"
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/FactomProject/factom"
 	"github.com/FactomProject/factomd/anchor"
-	"github.com/FactomProject/factomd/common/primitives"
 	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcrpcclient"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuitereleases/btcd/chaincfg"
-	"github.com/btcsuitereleases/btcd/txscript"
-	"github.com/btcsuitereleases/btcrpcclient"
-	"github.com/compasses/GOProjects/AnchorService/common"
-	"github.com/compasses/GOProjects/AnchorService/util"
 	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
-	"net/http"
 )
 
 type balance struct {
@@ -34,30 +29,33 @@ type balance struct {
 }
 
 type AnchorBTC struct {
-	toAnchorInfo     map[string]*anchor.AnchorRecord
-	balances         []balance // unspent balance & address & its WIF
-	dclient, wclient *btcrpcclient.Client
-	cfg              *util.AnchorServiceCfg
-	fee              btcutil.Amount // tx fee for written into btc
-	defaultAddress   btcutil.Address
-	serverECKey      factom.ECAddress
-	sigKey           primitives.PrivateKey
-
-	//Anchor chain ID
-	anchorChainID       *common.Hash
+	service             *AnchorService
+	toAnchorInfo        map[string]*anchor.AnchorRecord
+	balances            []balance // unspent balance & address & its WIF
+	dclient, wclient    *btcrpcclient.Client
+	cfg                 *util.AnchorServiceCfg
+	fee                 btcutil.Amount // tx fee for written into btc
+	defaultAddress      btcutil.Address
 	walletLocked        bool
 	confirmationsNeeded int
 }
 
+func NewAnchorBTC() *AnchorBTC {
+	btc := &AnchorBTC{
+		toAnchorInfo: make(map[string]*anchor.AnchorRecord),
+	}
+	return btc
+}
+
 func (anchorBTC *AnchorBTC) PlaceAnchor(msg common.DirectoryBlockAnchorInfo) {
-	anchor := new(anchor.AnchorRecord)
+	anchorRec := new(anchor.AnchorRecord)
 	btc := new(anchor.BitcoinStruct)
 
-	anchor.Bitcoin = btc
-	anchor.KeyMR = msg.KeyMR.String()
-	anchor.DBHeight = msg.DBHeight
-	anchor.AnchorRecordVer = 1
-	anchorBTC.doTransaction(anchor, msg.KeyMR)
+	anchorRec.Bitcoin = btc
+	anchorRec.KeyMR = msg.KeyMR.String()
+	anchorRec.DBHeight = msg.DBHeight
+	anchorRec.AnchorRecordVer = 1
+	anchorBTC.doTransaction(anchorRec, msg.KeyMR)
 }
 
 func (anchorBTC *AnchorBTC) InitRPCClient() error {
@@ -71,26 +69,6 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 	certHomePathBtcd := cfg.Btc.CertHomePathBtcd
 	rpcBtcdHost := cfg.Btc.RpcBtcdHost
 	anchorBTC.cfg = cfg
-
-	//Added anchor parameters
-	var err error
-	anchorBTC.serverECKey, err = factom.GetECAddress(cfg.Anchor.ServerECKey)
-	if err != nil {
-		panic("Cannot parse Server EC Key from configuration file: " + err.Error())
-	}
-	anchorBTC.sigKey, err = primitives.NewPrivateKeyFromHex(cfg.Anchor.SigKey)
-
-	if err != nil {
-		panic("Cannot parse signature key Key from configuration file: " + err.Error())
-	}
-
-	anchorChainID, err := common.HexToHash(cfg.Anchor.AnchorChainID)
-	log.Debug("anchorChainID: ", anchorChainID)
-	if err != nil || anchorChainID == nil {
-		panic("Cannot parse Server AnchorChainID from configuration file: " + err.Error())
-	}
-
-	anchorBTC.anchorChainID = anchorChainID
 
 	// Connect to local btcwallet RPC server using websockets.
 	ntfnHandlers := anchorBTC.createBtcwalletNotificationHandlers()
@@ -180,6 +158,7 @@ func (anchorBTC *AnchorBTC) updateUTXO() error {
 		return fmt.Errorf("cannot list unspent. %s", err)
 	}
 	log.Info("updateUTXO: unspentResults.len=", len(unspentResults))
+	log.Debug("unspent result is ", unspentResults)
 
 	if len(unspentResults) > 0 {
 		var i int
@@ -204,7 +183,7 @@ func (anchorBTC *AnchorBTC) updateUTXO() error {
 			return fmt.Errorf("cannot get WIF: %s", err)
 		}
 		anchorBTC.balances[i].wif = wif
-		//anchorLog.Infof("balance[%d]=%s \n", i, spew.Sdump(balances[i]))
+		log.Debug("balance \n", i, spew.Sdump(anchorBTC.balances[i]))
 	}
 
 	//time.Sleep(1 * time.Second)
@@ -238,8 +217,8 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 
 	ntfnHandlers := btcrpcclient.NotificationHandlers{
 
-		OnBlockConnected: func(hash *chainhash.Hash, height int32) {
-			//anchorLog.Info("dclient: OnBlockConnected: hash=", hash, ", height=", height)
+		OnBlockConnected: func(hash *chainhash.Hash, height int32, t time.Time) {
+			log.Info("dclient: OnBlockConnected: hash=", hash, ", height=", height, ", time=", t)
 			//go newBlock(hash, height)	// no need
 		},
 
@@ -250,15 +229,18 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 		},
 
 		OnRedeemingTx: func(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-			log.Info("dclient: OnRedeemingTx: details=%#v\n", details)
-			log.Info("dclient: OnRedeemingTx: tx.Hash=%#v,  tx.index=%d\n",
-				transaction.Hash().String(), transaction.Index())
+			log.Info("dclient: OnRedeemingTx: details=", details)
+			log.Info("dclient: OnRedeemingTx: tx.Hash=", transaction.Hash().String(), "tx.index=", transaction.Index())
 
 			if details != nil {
 				// do not block OnRedeemingTx callback
 				log.Info("Anchor: saveAnchorEntryInfo.")
 				go anchorBTC.saveAnchorEntryInfo(transaction, details)
 			}
+		},
+
+		OnRelevantTxAccepted: func(transaction []byte) {
+			log.Info("dclient: OnRelevantTxAccepted: tx=", string(transaction))
 		},
 	}
 
@@ -276,12 +258,16 @@ func (anchorBTC *AnchorBTC) saveAnchorEntryInfo(transaction *btcutil.Tx, details
 			anchorInfo.Bitcoin.BlockHash = details.Hash
 			anchorInfo.Bitcoin.Offset = int32(details.Index)
 			log.Info("anchor.record saved: " + spew.Sdump(anchorInfo))
-			saved = true
 
-			//err := submitEntryToAnchorChain(anchorRec)
-			//if err != nil {
-			//	log.Error("Error in writing anchor into anchor chain: ", err)
-			//}
+			err := anchorBTC.service.submitEntryToAnchorChain(anchorInfo)
+			if err != nil {
+				log.Error("Error in writing anchor into anchor chain: ", err)
+
+			} else {
+				saved = true
+			}
+
+			delete(anchorBTC.toAnchorInfo, anchorInfo.KeyMR)
 			break
 		}
 	}
@@ -324,7 +310,7 @@ func validateMsgTx(msgtx *wire.MsgTx, inputs []btcjson.ListUnspentResult) error 
 		if err != nil {
 			return fmt.Errorf("cannot decode scriptPubKey: %s", err)
 		}
-		engine, err := txscript.NewEngine(scriptPubKey, msgtx, i, flags)
+		engine, err := txscript.NewEngine(scriptPubKey, msgtx, i, flags, nil)
 		if err != nil {
 			log.Errorf("cannot create script engine: %s\n", err)
 			return fmt.Errorf("cannot create script engine: %s", err)
@@ -390,7 +376,6 @@ func (anchorBTC *AnchorBTC) addTxOuts(msgtx *wire.MsgTx, b balance, hash []byte,
 	builder.AddOp(txscript.OP_RETURN)
 	builder.AddData(anchorHash)
 
-	// latest routine from Conformal btcsuite returns 2 parameters, not 1... not sure what to do for people with the old conformal libraries :(
 	opReturn, err := builder.Script()
 	msgtx.AddTxOut(wire.NewTxOut(0, opReturn))
 	if err != nil {
@@ -405,13 +390,20 @@ func (anchorBTC *AnchorBTC) addTxOuts(msgtx *wire.MsgTx, b balance, hash []byte,
 	if change > 0 {
 
 		// Spend change.
-		pkScript, err := txscript.PayToAddrScript(b.address)
+		pkScript, err := getPayScript(b.address)
 		if err != nil {
+			log.Error("PayToAddrScript error, address is ", spew.Sdump(b.address))
 			return fmt.Errorf("cannot create txout script: %s", err)
 		}
 		msgtx.AddTxOut(wire.NewTxOut(int64(change), pkScript))
 	}
 	return nil
+}
+
+func getPayScript(address btcutil.Address) ([]byte, error) {
+	return txscript.NewScriptBuilder().AddOp(txscript.OP_DUP).AddOp(txscript.OP_HASH160).
+		AddData(address.ScriptAddress()).AddOp(txscript.OP_EQUALVERIFY).AddOp(txscript.OP_CHECKSIG).
+		Script()
 }
 
 func (anchorBTC *AnchorBTC) sendRawTransaction(msgtx *wire.MsgTx) (*chainhash.Hash, error) {
@@ -422,6 +414,7 @@ func (anchorBTC *AnchorBTC) sendRawTransaction(msgtx *wire.MsgTx) (*chainhash.Ha
 		return nil, err
 	}
 
+	log.Debug("send transaction: ", spew.Sdump(msgtx))
 	// use rpc client for btcd here for better callback info
 	// this should not require wallet to be unlocked
 	shaHash, err := anchorBTC.dclient.SendRawTransaction(msgtx, false)
@@ -433,128 +426,37 @@ func (anchorBTC *AnchorBTC) sendRawTransaction(msgtx *wire.MsgTx) (*chainhash.Ha
 }
 
 func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *common.Hash) {
+	if len(anchorBTC.balances) == 0 {
+		log.Warning("len(balances) == 0, start rescan UTXO *** ")
+		anchorBTC.updateUTXO()
+	}
+
+	if len(anchorBTC.balances) == 0 {
+		log.Warning("No balance in your wallet. No anchoring for now")
+		return
+	}
+
 	b := anchorBTC.balances[0]
 	anchorBTC.balances = anchorBTC.balances[1:]
+	anchorBTC.defaultAddress = b.address
+
 	log.Info("new balances.len=", len(anchorBTC.balances))
 
 	msgtx, err := anchorBTC.createRawTransaction(b, hash.Bytes(), anchor.DBHeight)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create Raw Transaction: %s", err)
+		log.Error("cannot create Raw Transaction: ", err)
+		log.Error("Abort do this transaction: ", spew.Sdump(anchor))
+		return
 	}
 
 	shaHash, err := anchorBTC.sendRawTransaction(msgtx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot send Raw Transaction: %s", err)
+		log.Error("cannot send Raw Transaction: %s", err)
+		log.Error("Abort do this transaction: ", spew.Sdump(msgtx), " anchor ", spew.Sdump(anchor))
+		return
 	}
 	anchor.Bitcoin.TXID = shaHash.String()
 
 	log.Info("New anchor transaction for :", anchor.Bitcoin.TXID)
 	anchorBTC.toAnchorInfo[anchor.KeyMR] = anchor
-
-	return shaHash, nil
-}
-
-func prependBlockHeight(height uint32, hash []byte) ([]byte, error) {
-	// dir block genesis block height starts with 0, for now
-	// similar to bitcoin genesis block
-	h := uint64(height)
-	if 0xFFFFFFFFFFFF&h != h {
-		return nil, errors.New("bad block height")
-	}
-
-	header := []byte{'F', 'a'}
-	big := make([]byte, 8)
-	binary.BigEndian.PutUint64(big, h) //height)
-
-	newdata := append(big[2:8], hash...)
-	newdata = append(header, newdata...)
-	return newdata, nil
-}
-
-func (anchor *AnchorBTC)  submitEntryToAnchorChain(anchorRec *anchor.AnchorRecord) error{
-	raw, sign, err := anchorRec.MarshalAndSignV2(anchor.sigKey)
-	if err != nil {
-		return err
-	}
-
-	newentry := NewEntry(anchor.anchorChainID, sign, raw)
-	commit, err := factom.ComposeEntryCommit(newentry, anchor.serverECKey)
-	if err != nil {
-		return err
-	}
-
-	commitBody, err := factom.EncodeJSON(commit)
-
-	if err != nil {
-		log.Error("Encode error ", commitBody)
-		return err
-	}
-
-	httpClient := http.DefaultClient
-	log.Info("do commit ", string(commitBody))
-	re, err := http.NewRequest("POST", fmt.Sprintf("http://%s/v2", "localhost:8088"), bytes.NewBuffer(commitBody))
-
-	if err != nil {
-		log.Error("error happened, for entry commit ", err)
-		return err
-	}
-
-	resp, err := httpClient.Do(re)
-	if err != nil {
-		log.Error("Error for http request ", err)
-		return err
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		log.Error("Factomd username/password incorrect.  Edit factomd.conf or\ncall factom-cli with -factomduser=<user> -factomdpassword=<pass>")
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-
-	r := factom.NewJSON2Response()
-	if err := json.Unmarshal(body, r); err != nil {
-		log.Error("Error on http request parse body", err)
-	}
-
-	log.Debug("Got response for commit entry ", r)
-	time.Sleep(2000)
-	rev, err := factom.ComposeEntryReveal(newentry)
-	if err != nil {
-		log.Info("Got error on entry compose ", err)
-	}
-
-	revBody, err := factom.EncodeJSON(rev)
-
-	log.Println("Do reveal ", string(revBody))
-	if err != nil {
-		log.Error("Encode error ", revBody)
-	}
-
-	re, err = http.NewRequest("POST", fmt.Sprintf("http://%s/v2", "localhost:8088"), bytes.NewBuffer(revBody))
-
-	if err != nil {
-		log.Error("error happened, for entry revl ", err)
-		return err
-	}
-
-	resp2, err := httpClient.Do(re)
-	if err != nil {
-		log.Error("Error for http request ", err)
-		return err
-	}
-
-	if resp2.StatusCode == http.StatusUnauthorized {
-		log.Error("Factomd username/password incorrect.  Edit factomd.conf or\ncall factom-cli with -factomduser=<user> -factomdpassword=<pass>")
-	}
-	defer resp2.Body.Close()
-
-	body, err = ioutil.ReadAll(resp2.Body)
-
-	r = factom.NewJSON2Response()
-	if err := json.Unmarshal(body, r); err != nil {
-		log.Error("Error on http request parse body", err)
-	}
-
-	log.Debug("Got response for reveal", r)
-	return nil
 }

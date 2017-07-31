@@ -62,4 +62,3 @@ func EncodeJSONToBuffer(data interface{}, b *bytes.Buffer) error {
 	_, err = b.Write(encoded)
 	return err
 }
-

@@ -1,12 +1,10 @@
 package util_test
 
 import (
+	"github.com/compasses/GOProjects/AnchorService/util"
 	"gopkg.in/gcfg.v1"
 	"testing"
-	"github.com/compasses/GOProjects/AnchorService/util"
 )
-
-
 
 func TestLoadDefaultConfigFull(t *testing.T) {
 	var defaultConfig string = `

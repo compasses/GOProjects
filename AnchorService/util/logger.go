@@ -6,7 +6,7 @@ import (
 
 var ContextLogger *log.Entry
 var MainLogger *log.Entry
-var CommonLooger *log.Entry
+var CommonLogger *log.Entry
 var AnchorLogger *log.Entry
 
 func init() {
@@ -15,8 +15,8 @@ func init() {
 	ContextLogger = log.WithFields(log.Fields{"common": "anchorservice"})
 
 	MainLogger = log.WithFields(log.Fields{"module": "main"})
-	CommonLooger = log.WithFields(log.Fields{"module":"common"})
-	AnchorLogger = log.WithFields(log.Fields{"module":"anchor"})
+	CommonLogger = log.WithFields(log.Fields{"module": "common"})
+	AnchorLogger = log.WithFields(log.Fields{"module": "anchor"})
 }
 
 func GetLogLevel(cfg *AnchorServiceCfg) log.Level {

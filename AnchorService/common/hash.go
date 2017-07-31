@@ -16,7 +16,6 @@ type Hash struct {
 	bytes [HASH_LENGTH]byte
 }
 
-
 func (c *Hash) MarshalledSize() uint64 {
 	return uint64(HASH_LENGTH)
 }

@@ -1,7 +1,8 @@
 package util
 
 import (
-	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/gcfg.v1"
 	"os"
 	"os/user"
@@ -9,8 +10,9 @@ import (
 
 type AnchorServiceCfg struct {
 	App struct {
-		HomeDir  string
-		AnchorTo int
+		HomeDir    string
+		FactomAddr string
+		AnchorTo   int
 	}
 	Anchor struct {
 		ServerECKey         string
@@ -101,11 +103,12 @@ LogPath								= "Log"
 `
 
 var config *AnchorServiceCfg
+var logger = log.WithFields(log.Fields{"module": "common"})
 
 func ReadConfig() *AnchorServiceCfg {
 	if config == nil {
 		config = readFromLocalOrDefault()
-		fmt.Printf("Got Config %q\n", config)
+		logger.Info("Got Config \n", spew.Sdump(config))
 	}
 
 	return config
@@ -117,8 +120,8 @@ func readFromLocalOrDefault() *AnchorServiceCfg {
 
 	err := gcfg.ReadFileInto(cfg, fileName)
 	if err != nil {
-		fmt.Errorf("Error on load file config, fileName = %s, err = %s", fileName, err)
-		fmt.Println("Use the default config ")
+		logger.Info("Error on load file config, fileName = %s, err = %s", fileName, err)
+		logger.Info("Use the default config ")
 		err = gcfg.ReadStringInto(cfg, defaultConfig)
 		if err != nil {
 			panic(err)
