@@ -34,43 +34,53 @@ type AnchorService struct {
 func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorService {
 	cfg := util.ReadConfig()
 	service := new(AnchorService)
+	var err error
+
+	service.serverECKey, err = factom.GetECAddress(cfg.Anchor.ServerECKey)
+	if err != nil {
+		panic("Cannot parse Server EC Key from configuration file: " + err.Error())
+	}
+
+	service.sigKey, err = primitives.NewPrivateKeyFromHex(cfg.Anchor.SigKey)
+	if err != nil {
+		panic("Cannot parse signature key Key from configuration file: " + err.Error())
+	}
+	anchorChainID, err := common.HexToHash(cfg.Anchor.AnchorChainID)
+	log.Debug("anchorChainID: ", anchorChainID)
+
+	if err != nil || anchorChainID == nil {
+		panic("Cannot parse Server AnchorChainID from configuration file: " + err.Error())
+	}
+
+	service.factomserver = cfg.App.FactomAddr
+	log.Info("FactomAddress ", service.factomserver)
+
+	service.anchorChainID = anchorChainID
+	service.DirBlockMsg = DirBlockMsg
 
 	if cfg.App.AnchorTo == 0 {
+		log.Info("anchor to btc")
 		btc := NewAnchorBTC()
 		err := btc.InitRPCClient()
 		if err != nil {
 			log.Fatal("Error on init RPC :", err)
 		}
 
-		service.serverECKey, err = factom.GetECAddress(cfg.Anchor.ServerECKey)
-		if err != nil {
-			panic("Cannot parse Server EC Key from configuration file: " + err.Error())
-		}
-		service.sigKey, err = primitives.NewPrivateKeyFromHex(cfg.Anchor.SigKey)
-		if err != nil {
-			panic("Cannot parse signature key Key from configuration file: " + err.Error())
-		}
-		anchorChainID, err := common.HexToHash(cfg.Anchor.AnchorChainID)
-		log.Debug("anchorChainID: ", anchorChainID)
-
-		if err != nil || anchorChainID == nil {
-			panic("Cannot parse Server AnchorChainID from configuration file: " + err.Error())
-		}
-		service.factomserver = cfg.App.FactomAddr
-		log.Info("FactomAddress ", service.factomserver)
-
-		service.anchorChainID = anchorChainID
 		service.DoAnchor = btc
-		service.DirBlockMsg = DirBlockMsg
 		btc.service = service
+		return service
+	} else if cfg.App.AnchorTo == 1 {
+		log.Info("anchor to eth")
+		eth := NewAnchorETH()
+		eth.InitEthClient()
+		service.DoAnchor = eth
+		eth.service = service
 
 		return service
-
-	} else if cfg.App.AnchorTo == 1 {
-		log.Fatal("Not support ETH currently...")
 	} else {
-		log.Fatal("Not support this kind of anchor")
+		log.Fatal("Not support this kind of anchor, check your configuration file")
 	}
+
 	return nil
 }
 
@@ -109,7 +119,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 		return err
 	}
 
-	commitBody, err := factom.EncodeJSON(commit)
+	commitBody, err := util.EncodeJSON(commit)
 
 	if err != nil {
 		log.Error("Encode error ", commitBody)
@@ -137,7 +147,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 
 	body, err := ioutil.ReadAll(resp.Body)
 
-	r := factom.NewJSON2Response()
+	r := util.NewJSON2Response()
 	if err := json.Unmarshal(body, r); err != nil {
 		log.Error("Error on http request parse body", err)
 	}
@@ -149,7 +159,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 		log.Info("Got error on entry compose ", err)
 	}
 
-	revBody, err := factom.EncodeJSON(rev)
+	revBody, err := util.EncodeJSON(rev)
 
 	log.Println("Do reveal ", string(revBody))
 	if err != nil {
@@ -176,7 +186,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 
 	body, err = ioutil.ReadAll(resp2.Body)
 
-	r = factom.NewJSON2Response()
+	r = util.NewJSON2Response()
 	if err := json.Unmarshal(body, r); err != nil {
 		log.Error("Error on http request parse body", err)
 	}

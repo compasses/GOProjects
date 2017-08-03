@@ -22,7 +22,8 @@ func main() {
 		service := anchor.NewAnchorService(BlockMsg)
 		factomSync := anchor.NewFactomSync(service)
 		go service.Start()
-		go factomSync.StartSync()
+		//go factomSync.StartSync()
+		go factomSync.SyncUp()
 
 		return nil
 	}

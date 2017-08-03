@@ -59,7 +59,7 @@ func (anchorBTC *AnchorBTC) PlaceAnchor(msg common.DirectoryBlockAnchorInfo) {
 }
 
 func (anchorBTC *AnchorBTC) InitRPCClient() error {
-	log.Debug("init RPC client")
+	log.Debug("init anchorBTC RPC client")
 	cfg := util.ReadConfig()
 	certHomePath := cfg.Btc.CertHomePath
 	rpcClientHost := cfg.Btc.RpcClientHost
@@ -248,7 +248,7 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 }
 
 func (anchorBTC *AnchorBTC) saveAnchorEntryInfo(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-	log.Info("in saveAnchorEntryInfo")
+	log.Info("in saveAnchorEntryInfo, anchor record count ", len(anchorBTC.toAnchorInfo))
 	var saved = false
 	for _, anchorInfo := range anchorBTC.toAnchorInfo {
 		if strings.Compare(anchorInfo.Bitcoin.TXID, transaction.Hash().String()) == 0 {

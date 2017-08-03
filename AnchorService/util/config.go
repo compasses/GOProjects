@@ -14,12 +14,14 @@ type AnchorServiceCfg struct {
 		FactomAddr string
 		AnchorTo   int
 	}
+
 	Anchor struct {
 		ServerECKey         string
 		AnchorChainID       string
 		SigKey              string
 		ConfirmationsNeeded int
 	}
+
 	Btc struct {
 		SendToBTCinSeconds int
 		WalletPassphrase   string
@@ -34,18 +36,13 @@ type AnchorServiceCfg struct {
 		RpcUser            string
 		RpcPass            string
 	}
+
 	Eth struct {
-		WalletPassphrase  string
-		CertHomePath      string
-		RpcClientHost     string
-		RpcClientEndpoint string
-		RpcClientUser     string
-		RpcClientPass     string
-		EthTransFee       float64
-		CertHomePathBtcd  string
-		RpcEthHost        string
-		RpcUser           string
-		RpcPass           string
+		AccountPassphrase string
+		AccountAddress    string
+		EthHttpHost       string
+		Gas               string
+		GasPrice          string
 	}
 
 	Log struct {
@@ -82,17 +79,11 @@ RpcUser								= testuser
 RpcPass								= notarychain
 
 [eth]
-WalletPassphrase 	  				= "lindasilva"
-CertHomePath			  			= "btcwallet"
-RpcClientHost			  			= "localhost:18332"
-RpcClientEndpoint					= "ws"
-RpcClientUser			  			= "testuser"
-RpcClientPass 						= "notarychain"
-EthTransFee				  			= 0.0001
-CertHomePathBtcd					= "btcd"
-RpcEthHost 			  			= "localhost:18334"
-RpcUser								= testuser
-RpcPass								= notarychain
+AccountAddress                         = "0x1786726f7636ba45b4Bfe9Cb546D06C313150E4D"
+AccountPassphrase                      = "Initial0"
+EthHttpHost                            = "localhost:8545"
+Gas                                    = "0x76c0"
+GasPrice                               = "0x9184e72a000"
 
 ; ------------------------------------------------------------------------------
 ; logLevel - allowed values are: debug, info, warn, error, fatal, panic
