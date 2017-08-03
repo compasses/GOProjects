@@ -367,7 +367,7 @@ func (anchorBTC *AnchorBTC) addTxIn(msgtx *wire.MsgTx, b balance) error {
 }
 
 func (anchorBTC *AnchorBTC) addTxOuts(msgtx *wire.MsgTx, b balance, hash []byte, blockHeight uint32) error {
-	anchorHash, err := prependBlockHeight(blockHeight, hash)
+	anchorHash, err := PrependBlockHeight(blockHeight, hash)
 	if err != nil {
 		log.Errorf("ScriptBuilder error: %v\n", err)
 	}

@@ -19,7 +19,6 @@ type AnchorETH struct {
 	accountAddress string
 	accountPass    string
 	ethHost        string
-	gas            string
 	gasprice       string
 	service        *AnchorService
 	count          int
@@ -36,7 +35,6 @@ func (eth *AnchorETH) InitEthClient() error {
 	eth.accountAddress = cfg.Eth.AccountAddress
 	eth.accountPass = cfg.Eth.AccountPassphrase
 	eth.ethHost = cfg.Eth.EthHttpHost
-	eth.gas = cfg.Eth.Gas
 	eth.gasprice = cfg.Eth.GasPrice
 
 	return nil
@@ -71,8 +69,8 @@ func (anchorETH *AnchorETH) doTransaction(record *anchor.AnchorRecord) {
 	}
 
 	log.Info("Got transaction hash ", *txHashStr)
-	timeChan := time.NewTicker(time.Second * 20).C
-	totalTry := 50
+	timeChan := time.NewTicker(time.Minute).C
+	totalTry := 60
 
 	// wait confirm to save anchor into factom
 ForLoop:
@@ -82,7 +80,7 @@ ForLoop:
 			totalTry--
 			receipt, err := anchorETH.getTransactionReceipt(*txHashStr)
 			if err != nil {
-				log.Info("error happen retry, total try left ", totalTry)
+				log.Info("error happen ", err, " retry , total try left ", totalTry)
 				continue
 			}
 			anchorETH.saveAnchor(receipt, record)
@@ -152,7 +150,7 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 		return nil, fmt.Errorf("HextoHash error %s", err)
 	}
 
-	data, err := prependBlockHeight(record.DBHeight, hash.GetBytes())
+	data, err := PrependBlockHeight(record.DBHeight, hash.GetBytes())
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +161,6 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 		map[string]interface{}{
 			"from":     eth.accountAddress,
 			"to":       eth.accountAddress,
-			"gas":      eth.gas,
 			"gasPrice": eth.gasprice,
 			"value":    "0x1",
 			"data":     hexs,

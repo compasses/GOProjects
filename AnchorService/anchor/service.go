@@ -195,7 +195,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 	return nil
 }
 
-func prependBlockHeight(height uint32, hash []byte) ([]byte, error) {
+func PrependBlockHeight(height uint32, hash []byte) ([]byte, error) {
 	// dir block genesis block height starts with 0, for now
 	// similar to bitcoin genesis block
 	h := uint64(height)
