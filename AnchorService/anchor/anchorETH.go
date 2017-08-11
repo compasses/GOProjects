@@ -78,11 +78,17 @@ ForLoop:
 		select {
 		case <-timeChan:
 			totalTry--
+			if totalTry < 0 {
+				break ForLoop
+			}
+
 			receipt, err := anchorETH.getTransactionReceipt(*txHashStr)
 			if err != nil {
 				log.Info("error happen ", err, " retry , total try left ", totalTry)
 				continue
 			}
+			log.Debug("Got receipt ", spew.Sdump(receipt))
+
 			anchorETH.saveAnchor(receipt, record)
 			break ForLoop
 		}
@@ -101,9 +107,8 @@ func (eth *AnchorETH) saveAnchor(receipt *common.EthTxReceipt, record *anchor.An
 }
 
 func (eth *AnchorETH) getTransactionReceipt(txHashStr string) (*common.EthTxReceipt, error) {
-	receiptJson := util.NewJSON2Request("eth_getTransactionReceipt", 1, []interface{}{
-		txHashStr,
-	})
+	log.Info("got receipt hashstr ", txHashStr)
+	receiptJson := util.NewJSON2Request("eth_getTransactionReceipt", 1, []interface{}{txHashStr})
 
 	receiptReq, err := util.EncodeJSON(receiptJson)
 	if err != nil {
@@ -131,10 +136,15 @@ func (eth *AnchorETH) getTransactionReceipt(txHashStr string) (*common.EthTxRece
 		return nil, fmt.Errorf("Error on http request parse body %s", err)
 	}
 
-	if r.JSONResult() == nil {
+	log.Debug("Receipt get result ", spew.Sdump(r))
+
+	if r.Error != nil {
+		return nil, fmt.Errorf("Receipt call error...%s", r.Error.Message)
+	}
+	if string(r.JSONResult()) == "null" {
 		return nil, fmt.Errorf("Receipt not generate now, retry later...")
 	}
-	log.Debug("Receipt get result ", spew.Sdump(r))
+
 	receipt := common.EthTxReceipt{}
 
 	if err = json.Unmarshal(r.JSONResult(), &receipt); err != nil {
@@ -194,9 +204,13 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 
 	log.Debug("Got send transaction result ", spew.Sdump(r))
 
-	strs := string(r.JSONResult())
+	var result string
 
-	return &strs, nil
+	if err := json.Unmarshal(r.JSONResult(), &result); err != nil {
+		return nil, fmt.Errorf("Error on parse json result %s", err)
+	}
+
+	return &result, nil
 }
 
 func (eth *AnchorETH) unlockAccount() error {

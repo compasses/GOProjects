@@ -1,38 +1,52 @@
 package util
 
 import (
-	log "github.com/sirupsen/logrus"
+	log "github.com/inconshreveable/log15"
+	"os"
 )
 
-var ContextLogger *log.Entry
-var MainLogger *log.Entry
-var CommonLogger *log.Entry
-var AnchorLogger *log.Entry
+var ContextLogger log.Logger
+var MainLogger log.Logger
+var CommonLogger log.Logger
+var AnchorLogger log.Logger
 
 func init() {
 	cfg := ReadConfig()
-	log.SetLevel(GetLogLevel(cfg))
-	ContextLogger = log.WithFields(log.Fields{"common": "anchorservice"})
+	logFile := GetHomeDir() + "/.anchorservice/anchorservice.log"
+	var handler log.Handler
 
-	MainLogger = log.WithFields(log.Fields{"module": "main"})
-	CommonLogger = log.WithFields(log.Fields{"module": "common"})
-	AnchorLogger = log.WithFields(log.Fields{"module": "anchor"})
+	if GetLogLevel(cfg) == log.LvlDebug {
+		handler = log.MultiHandler(
+			log.StreamHandler(os.Stdout, log.LogfmtFormat()),
+		)
+
+		log.Root().SetHandler(log.CallerFileHandler(handler))
+	} else {
+		handler = log.MultiHandler(
+			log.Must.FileHandler(logFile, log.LogfmtFormat()),
+		)
+		log.Root().SetHandler(handler)
+	}
+
+	ContextLogger = log.New("common", "anchorservice")
+
+	MainLogger = log.New("module", "main")
+	CommonLogger = log.New("module", "common")
+	AnchorLogger = log.New("module", "anchor")
 }
 
-func GetLogLevel(cfg *AnchorServiceCfg) log.Level {
+func GetLogLevel(cfg *AnchorServiceCfg) log.Lvl {
 	switch cfg.Log.LogLevel {
 	case "info":
-		return log.InfoLevel
+		return log.LvlInfo
 	case "warn":
-		return log.WarnLevel
+		return log.LvlWarn
 	case "debug":
-		return log.DebugLevel
+		return log.LvlDebug
 	case "error":
-		return log.ErrorLevel
+		return log.LvlError
 	case "fatal":
-		return log.FatalLevel
-	case "panic":
-		return log.PanicLevel
+		return log.LvlCrit
 	default:
 		panic("No known log level" + cfg.Log.LogLevel)
 	}

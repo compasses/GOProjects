@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/FactomProject/go-spew/spew"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -31,8 +32,53 @@ func TestAnchorETH_StrToInt(t *testing.T) {
 	fmt.Println("h ", h)
 }
 
+func TestGetReceipt(t *testing.T) {
+	testStr := "0x7b162854562ccba1c31bee4de847c643d4cbe4019e722f57ac0a89b3ecf4f87f"
+
+	receiptJson := util.NewJSON2Request("eth_getTransactionReceipt", 1, []interface{}{
+		testStr,
+	})
+
+	receiptReq, err := util.EncodeJSON(receiptJson)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("Receipt get ", spew.Sdump(receiptJson))
+
+	httpReq, err := http.NewRequest("POST", fmt.Sprintf("http://%s", EthHttpHost), bytes.NewBuffer(receiptReq))
+	if err != nil {
+		fmt.Println("Http New Request error %s", err)
+	}
+
+	httpClient := http.DefaultClient
+	resp, err := httpClient.Do(httpReq)
+	if err != nil || resp.StatusCode != 200 {
+		fmt.Println("Http error %s", err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	r := util.NewJSON2Response()
+
+	if err := json.Unmarshal(body, r); err != nil {
+		fmt.Println("Error on http request parse body %s", err)
+	}
+
+	if r.JSONResult() == nil {
+		fmt.Println("Receipt not generate now, retry later...")
+	}
+	fmt.Println("Receipt get result ", spew.Sdump(r))
+	receipt := common.EthTxReceipt{}
+
+	if err = json.Unmarshal(r.JSONResult(), &receipt); err != nil {
+		fmt.Println("Error on unmarshal receipt %s", err)
+	}
+
+	fmt.Println(spew.Sdump(receipt))
+}
+
 func TestMaxTransaction(t *testing.T) {
-	Unlock()
 
 	hash, err := common.HexToHash("c6d571c489c76346a45c271fa2ff831036cd7053a1eba37789b3754d20bfb1ea")
 	if err != nil {
@@ -59,7 +105,7 @@ func TestMaxTransaction(t *testing.T) {
 			"from":     AccountAddress,
 			"to":       AccountAddress,
 			"gasPrice": GasPrice,
-			"value":    "0x1",
+			"value":    "0x0",
 			"data":     hexs,
 		},
 	})
@@ -96,7 +142,7 @@ func TestMaxTransaction(t *testing.T) {
 	fmt.Println("Got transaction ", strs)
 }
 
-func Unlock() {
+func TestUnlock(t *testing.T) {
 	unlockReqJson := util.NewJSON2Request("personal_unlockAccount", 1, []interface{}{AccountAddress, AccountPassphrase, 3600})
 	unlockReq, err := util.EncodeJSON(unlockReqJson)
 	if err != nil {
@@ -113,6 +159,8 @@ func Unlock() {
 	if err != nil || resp.StatusCode != 200 {
 		fmt.Println("Http error %s", err)
 	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("got response is ", string(body))
 
 	defer resp.Body.Close()
 }

@@ -10,47 +10,50 @@ func TestLoadDefaultConfigFull(t *testing.T) {
 	var defaultConfig string = `
 	; ------------------------------------------------------------------------------
 ; App settings
+; AnchorTo: 0 -- BTC, 1 -- ETH
 ; ------------------------------------------------------------------------------
 [app]
-HomeDir								= ""
-
-[anchor]
-ServerECKey							= 397c49e182caa97737c6b394591c614156fbe7998d7bf5d76273961e9fa1edd406ed9e69bfdf85db8aa69820f348d096985bc0b11cc9fc9dcee3b8c68b41dfd5
-AnchorChainID						= df3ade9eec4b08d5379cc64270c30ea7315d8a8a1a69efe2b98a60ecdd69e604
-ConfirmationsNeeded					= 20
-
-[btc]
-WalletPassphrase 	  				= "lindasilva"
-CertHomePath			  			= "btcwallet"
-RpcClientHost			  			= "localhost:18332"
-RpcClientEndpoint					= "ws"
-RpcClientUser			  			= "testuser"
-RpcClientPass 						= "notarychain"
-BtcTransFee				  			= 0.0001
-CertHomePathBtcd					= "btcd"
-RpcBtcdHost 			  			= "localhost:18334"
-RpcUser								= testuser
-RpcPass								= notarychain
-
-[eth]
-WalletPassphrase 	  				= "lindasilva"
-CertHomePath			  			= "btcwallet"
-RpcClientHost			  			= "localhost:18332"
-RpcClientEndpoint					= "ws"
-RpcClientUser			  			= "testuser"
-RpcClientPass 						= "notarychain"
-EthTransFee				  			= 0.0001
-CertHomePathBtcd					= "btcd"
-RpcEthHost 			  			= "localhost:18334"
-RpcUser								= testuser
-RpcPass								= notarychain
+HomeDir                               = ""
+FactomAddr                            = "localhost:8088"
+AnchorTo                              = 1
 
 ; ------------------------------------------------------------------------------
-; logLevel - allowed values are: debug, info, notice, warning, error, critical, alert, emergency and none
+; anchor settings
+; ------------------------------------------------------------------------------
+[anchor]
+ServerECKey                         = Es38XqZaMQmjtuLKK9c238QsU2vFsFR4StHTUM6fVZFsSejHWcui
+AnchorChainID                       = df3ade9eec4b08d5379cc64270c30ea7315d8a8a1a69efe2b98a60ecdd69e604
+SigKey                              = e89f1216745b61d056b5297be7bdecd7b82966feb2ae482f686e127bd1b2ff80
+ConfirmationsNeeded                 = 1
+
+; ------------------------------------------------------------------------------
+; anchor to bitcoin network
+; ------------------------------------------------------------------------------
+[btc]
+WalletPassphrase                      = "Initial0"
+CertHomePath                          = "btcwallet"
+RpcClientHost                         = "localhost:18332"
+RpcClientEndpoint                     = "ws"
+RpcClientUser                         = "jbi"
+RpcClientPass                         = "jbi123456"
+BtcTransFee                           = 0.001
+CertHomePathBtcd                      = "btcd"
+RpcBtcdHost                           = "localhost:18334"
+
+; ------------------------------------------------------------------------------
+; anchor to ethereum network
+; ------------------------------------------------------------------------------
+[eth]
+AccountAddress                         = "0x100c8b406978a413c4305b3AA6074F734feE6C9c"
+AccountPassphrase                      = "Initial0"
+EthHttpHost                            = "localhost:8545"
+GasPrice                               = "0x1"
+
+; ------------------------------------------------------------------------------
+; logLevel - allowed values are: debug, info, warn, error, fatal, panic
 ; ------------------------------------------------------------------------------
 [log]
-logLevel 							= info
-LogPath								= "Log"
+logLevel                              = debug
 	`
 
 	cfg := new(util.AnchorServiceCfg)

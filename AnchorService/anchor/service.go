@@ -63,7 +63,7 @@ func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorS
 		btc := NewAnchorBTC()
 		err := btc.InitRPCClient()
 		if err != nil {
-			log.Fatal("Error on init RPC :", err)
+			log.Crit("Error on init RPC :", err)
 		}
 
 		service.DoAnchor = btc
@@ -78,7 +78,7 @@ func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorS
 
 		return service
 	} else {
-		log.Fatal("Not support this kind of anchor, check your configuration file")
+		log.Crit("Not support this kind of anchor, check your configuration file")
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 
 	revBody, err := util.EncodeJSON(rev)
 
-	log.Println("Do reveal ", string(revBody))
+	log.Info("Do reveal ", string(revBody))
 	if err != nil {
 		log.Error("Encode error ", revBody)
 	}

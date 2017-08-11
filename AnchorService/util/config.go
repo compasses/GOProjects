@@ -106,7 +106,7 @@ func ReadConfig() *AnchorServiceCfg {
 }
 
 func readFromLocalOrDefault() *AnchorServiceCfg {
-	fileName := getHomeDir() + "/.anchorservice/anchorservice.conf"
+	fileName := GetHomeDir() + "/.anchorservice/anchorservice.conf"
 	cfg := new(AnchorServiceCfg)
 
 	err := gcfg.ReadFileInto(cfg, fileName)
@@ -122,7 +122,7 @@ func readFromLocalOrDefault() *AnchorServiceCfg {
 	return cfg
 }
 
-func getHomeDir() string {
+func GetHomeDir() string {
 	// Get the OS specific home directory via the Go standard lib.
 	var homeDir string
 	usr, err := user.Current()

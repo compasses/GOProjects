@@ -119,7 +119,7 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 
 	err = anchorBTC.initWallet()
 	if err != nil {
-		log.Fatal("Init Wallet error ", err)
+		log.Crit("Init Wallet error ", err)
 	}
 
 	return nil
@@ -312,11 +312,11 @@ func validateMsgTx(msgtx *wire.MsgTx, inputs []btcjson.ListUnspentResult) error 
 		}
 		engine, err := txscript.NewEngine(scriptPubKey, msgtx, i, flags, nil)
 		if err != nil {
-			log.Errorf("cannot create script engine: %s\n", err)
+			log.Error("cannot create script engine: %s\n", err)
 			return fmt.Errorf("cannot create script engine: %s", err)
 		}
 		if err = engine.Execute(); err != nil {
-			log.Errorf("cannot execute script engine: %s\n  === UnspentResult: %s", err, spew.Sdump(inputs[i]))
+			log.Error("cannot execute script engine: %s\n  === UnspentResult: %s", err, spew.Sdump(inputs[i]))
 			return fmt.Errorf("cannot execute script engine: %s", err)
 		}
 	}
@@ -369,7 +369,7 @@ func (anchorBTC *AnchorBTC) addTxIn(msgtx *wire.MsgTx, b balance) error {
 func (anchorBTC *AnchorBTC) addTxOuts(msgtx *wire.MsgTx, b balance, hash []byte, blockHeight uint32) error {
 	anchorHash, err := PrependBlockHeight(blockHeight, hash)
 	if err != nil {
-		log.Errorf("ScriptBuilder error: %v\n", err)
+		log.Error("ScriptBuilder error: %v\n", err)
 	}
 
 	builder := txscript.NewScriptBuilder()
@@ -379,7 +379,7 @@ func (anchorBTC *AnchorBTC) addTxOuts(msgtx *wire.MsgTx, b balance, hash []byte,
 	opReturn, err := builder.Script()
 	msgtx.AddTxOut(wire.NewTxOut(0, opReturn))
 	if err != nil {
-		log.Errorf("ScriptBuilder error: %v\n", err)
+		log.Error("ScriptBuilder error: %v\n", err)
 	}
 
 	amount, _ := btcutil.NewAmount(b.unspentResult.Amount)
@@ -427,12 +427,12 @@ func (anchorBTC *AnchorBTC) sendRawTransaction(msgtx *wire.MsgTx) (*chainhash.Ha
 
 func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *common.Hash) {
 	if len(anchorBTC.balances) == 0 {
-		log.Warning("len(balances) == 0, start rescan UTXO *** ")
+		log.Warn("len(balances) == 0, start rescan UTXO *** ")
 		anchorBTC.updateUTXO()
 	}
 
 	if len(anchorBTC.balances) == 0 {
-		log.Warning("No balance in your wallet. No anchoring for now")
+		log.Warn("No balance in your wallet. No anchoring for now")
 		return
 	}
 

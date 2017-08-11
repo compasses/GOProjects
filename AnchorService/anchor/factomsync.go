@@ -78,8 +78,7 @@ func (sync *FactomSync) SyncUp() error {
 
 	// TODO Just for test remove this line
 	height = height - 100 //
-
-	//ForLoop:
+ForLoop:
 	for {
 		select {
 		case <-timeChan:
@@ -93,9 +92,10 @@ func (sync *FactomSync) SyncUp() error {
 			log.Info("Got dblockanchor info let's anchor it ", dblock)
 			sync.DirBlockMsg <- *dblock
 			height++
+
 			//if totoal == 100 {
 			//	log.Debug("let's break up for test")
-			//	break ForLoop
+			break ForLoop
 			//}
 		}
 	}
