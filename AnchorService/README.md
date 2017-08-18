@@ -40,8 +40,13 @@ use the default configuation file, change as need, just run ./anchorservice
 
 1. go get  
 2. git clone sys, net, crypto under src/golang.org/x:
+
+```
     git clone https://github.com/golang/sys/
     git clone https://github.com/golang/net/
     git clone https://github.com/golang/crypto/
+```
+3. glide install
+
+
     
-3. for btcutil: git checkout 61ec18f9c8a4552c209416ce363592e35e416997

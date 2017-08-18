@@ -1,0 +1,33 @@
+package: AnchorService
+import:
+- package: github.com/FactomProject/factom
+- package: github.com/FactomProject/factomd
+  subpackages:
+  - anchor
+  - common/primitives
+- package: github.com/FactomProject/go-spew
+  subpackages:
+  - spew
+- package: github.com/btcsuite/btcd
+  subpackages:
+  - btcjson
+  - chaincfg
+  - chaincfg/chainhash
+  - txscript
+  - wire
+- package: github.com/btcsuite/btcrpcclient
+- package: github.com/btcsuite/btcutil
+- package: github.com/davecgh/go-spew
+  subpackages:
+  - spew
+- package: github.com/inconshreveable/log15
+- package: github.com/sirupsen/logrus
+- package: github.com/urfave/cli
+- package: gopkg.in/gcfg.v1
+testImport:
+- package: github.com/FactomProject/FactomCode
+  subpackages:
+  - common
+- package: github.com/compasses/GOProjects
+  subpackages:
+  - AnchorService/util

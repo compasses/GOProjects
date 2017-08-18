@@ -1,0 +1,13 @@
+stages:
+  - build
+  - test
+job1:
+  stage: test
+  script:
+    - go test ./...
+
+job2:
+  stage: build
+  script:
+  - go get ./..
+  - go build
