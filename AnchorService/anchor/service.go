@@ -14,6 +14,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"os"
+	"syscall"
 )
 
 var log = util.AnchorLogger
@@ -29,9 +31,10 @@ type AnchorService struct {
 	factomserver  string
 	anchorChainID *common.Hash
 	DirBlockMsg   chan common.DirectoryBlockAnchorInfo
+	AnchorFail    chan bool
 }
 
-func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorService {
+func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo, AnchorFail chan bool) *AnchorService {
 	cfg := util.ReadConfig()
 	service := new(AnchorService)
 	var err error
@@ -46,24 +49,24 @@ func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorS
 		panic("Cannot parse signature key Key from configuration file: " + err.Error())
 	}
 	anchorChainID, err := common.HexToHash(cfg.Anchor.AnchorChainID)
-	log.Debug("anchorChainID: ", anchorChainID)
 
 	if err != nil || anchorChainID == nil {
 		panic("Cannot parse Server AnchorChainID from configuration file: " + err.Error())
 	}
 
 	service.factomserver = cfg.App.FactomAddr
-	log.Info("FactomAddress ", service.factomserver)
+	log.Info("FactomAddress ", "server addr", service.factomserver)
 
 	service.anchorChainID = anchorChainID
 	service.DirBlockMsg = DirBlockMsg
+	service.AnchorFail = AnchorFail
 
 	if cfg.App.AnchorTo == 0 {
 		log.Info("anchor to btc")
 		btc := NewAnchorBTC()
 		err := btc.InitRPCClient()
 		if err != nil {
-			log.Crit("Error on init RPC :", err)
+			log.Crit("Error on init RPC :","error", err)
 		}
 
 		service.DoAnchor = btc
@@ -87,11 +90,20 @@ func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo) *AnchorS
 func (service *AnchorService) Start() {
 	log.Info("Start Anchor service...")
 
+	failedTime := 0
 	for {
 		select {
 		case anchorMsg := <-service.DirBlockMsg:
-			log.Info("Got anchor msg: ", anchorMsg)
+			log.Info("Got anchor msg: ", "msg", anchorMsg)
 			go service.DoAnchor.PlaceAnchor(anchorMsg)
+		case _ = <- service.AnchorFail:
+			failedTime++
+			log.Error("anchor failed", "time", failedTime)
+			if failedTime >= 10 {
+				log.Error("more than 10 times fail to anchor, just quit job")
+				p, _:= os.FindProcess(os.Getpid())
+				p.Signal(syscall.SIGQUIT)
+			}
 		}
 	}
 }
@@ -127,7 +139,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 	}
 
 	httpClient := http.DefaultClient
-	log.Info("do commit ", string(commitBody))
+	log.Info("do commit ", "commit", string(commitBody))
 	re, err := http.NewRequest("POST", fmt.Sprintf("http://%s/v2", anchor.factomserver), bytes.NewBuffer(commitBody))
 
 	if err != nil {
@@ -152,7 +164,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 		log.Error("Error on http request parse body", err)
 	}
 
-	log.Debug("Got response for commit entry ", r)
+	log.Debug("Got response for commit entry ", "entry", r)
 	time.Sleep(2000)
 	rev, err := factom.ComposeEntryReveal(newentry)
 	if err != nil {
@@ -161,7 +173,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 
 	revBody, err := util.EncodeJSON(rev)
 
-	log.Info("Do reveal ", string(revBody))
+	log.Info("Do reveal ", "body", string(revBody))
 	if err != nil {
 		log.Error("Encode error ", revBody)
 	}
@@ -191,7 +203,7 @@ func (anchor *AnchorService) submitEntryToAnchorChain(anchorRec *anchor.AnchorRe
 		log.Error("Error on http request parse body", err)
 	}
 
-	log.Debug("Got response for reveal", r)
+	log.Debug("Got response for reveal", "response", r)
 	return nil
 }
 

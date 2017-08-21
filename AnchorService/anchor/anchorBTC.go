@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"errors"
 )
 
 type balance struct {
@@ -55,7 +56,10 @@ func (anchorBTC *AnchorBTC) PlaceAnchor(msg common.DirectoryBlockAnchorInfo) {
 	anchorRec.KeyMR = msg.KeyMR.String()
 	anchorRec.DBHeight = msg.DBHeight
 	anchorRec.AnchorRecordVer = 1
-	anchorBTC.doTransaction(anchorRec, msg.KeyMR)
+	if err := anchorBTC.doTransaction(anchorRec, msg.KeyMR); err != nil {
+		anchorBTC.service.AnchorFail <- false
+	}
+
 }
 
 func (anchorBTC *AnchorBTC) InitRPCClient() error {
@@ -73,7 +77,7 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 	// Connect to local btcwallet RPC server using websockets.
 	ntfnHandlers := anchorBTC.createBtcwalletNotificationHandlers()
 	certHomeDir := btcutil.AppDataDir(certHomePath, false)
-	log.Debug("btcwallet.cert.home=", certHomeDir)
+	log.Debug("btcwallet.cert.home=", "dir ", certHomeDir)
 	certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
 	if err != nil {
 		return fmt.Errorf("cannot read rpc.cert file: %s\n", err)
@@ -97,7 +101,7 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 	// Connect to local btcd RPC server using websockets.
 	dntfnHandlers := anchorBTC.createBtcdNotificationHandlers()
 	certHomeDir = btcutil.AppDataDir(certHomePathBtcd, false)
-	log.Debug("btcd.cert.home=", certHomeDir)
+	log.Debug("btcd.cert.home=", "dir ", certHomeDir)
 	certs, err = ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
 	if err != nil {
 		return fmt.Errorf("cannot read rpc.cert file for btcd rpc server: %s\n", err)
@@ -145,7 +149,7 @@ func (anchorBTC *AnchorBTC) initWallet() error {
 }
 
 func (anchorBTC *AnchorBTC) updateUTXO() error {
-	log.Info("updateUTXO: walletLocked=", anchorBTC.walletLocked)
+	log.Info("updateUTXO: walletLocked=", "locked ", anchorBTC.walletLocked)
 	anchorBTC.balances = make([]balance, 0, 200)
 
 	err := anchorBTC.unlockWallet(int64(6)) //600
@@ -157,8 +161,8 @@ func (anchorBTC *AnchorBTC) updateUTXO() error {
 	if err != nil {
 		return fmt.Errorf("cannot list unspent. %s", err)
 	}
-	log.Info("updateUTXO: unspentResults.len=", len(unspentResults))
-	log.Debug("unspent result is ", unspentResults)
+	log.Info("updateUTXO: unspentResults.len=", "len ", len(unspentResults))
+	log.Debug("unspent result is ", "result ", unspentResults)
 
 	if len(unspentResults) > 0 {
 		var i int
@@ -169,7 +173,7 @@ func (anchorBTC *AnchorBTC) updateUTXO() error {
 			}
 		}
 	}
-	log.Info("updateUTXO: balances.len=", len(anchorBTC.balances))
+	log.Info("updateUTXO: balances.len=", "len", len(anchorBTC.balances))
 
 	for i, b := range anchorBTC.balances {
 		addr, err := btcutil.DecodeAddress(b.unspentResult.Address, &chaincfg.TestNet3Params)
@@ -195,17 +199,17 @@ func (anchorBTC *AnchorBTC) createBtcwalletNotificationHandlers() btcrpcclient.N
 	ntfnHandlers := btcrpcclient.NotificationHandlers{
 		OnAccountBalance: func(account string, balance btcutil.Amount, confirmed bool) {
 			//go newBalance(account, balance, confirmed)
-			log.Info("wclient: OnAccountBalance, account=", account, ", balance=",
+			log.Info("wclient: OnAccountBalance", "account=", account, ", balance=",
 				balance.ToUnit(btcutil.AmountBTC), ", confirmed=", confirmed)
 		},
 
 		OnWalletLockState: func(locked bool) {
-			log.Info("wclient: OnWalletLockState, locked=", locked)
+			log.Info("wclient: OnWalletLockState", "locked=", locked)
 			anchorBTC.walletLocked = locked
 		},
 
 		OnUnknownNotification: func(method string, params []json.RawMessage) {
-			log.Info("wclient: OnUnknownNotification: method=", method, "\nparams[0]=",
+			log.Info("wclient: OnUnknownNotification","method=", method, "\nparams[0]=",
 				string(params[0]), "\nparam[1]=", string(params[1]))
 		},
 	}
@@ -218,19 +222,19 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 	ntfnHandlers := btcrpcclient.NotificationHandlers{
 
 		OnBlockConnected: func(hash *chainhash.Hash, height int32, t time.Time) {
-			log.Info("dclient: OnBlockConnected: hash=", hash, ", height=", height, ", time=", t)
+			log.Info("dclient: OnBlockConnected"," hash=", hash, ", height=", height, ", time=", t)
 			//go newBlock(hash, height)	// no need
 		},
 
 		OnRecvTx: func(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-			log.Info("dclient: OnRecvTx: details=%#v\n", details)
+			log.Info("dclient: OnRecvTx","details=%#v\n", details)
 			log.Info("dclient: OnRecvTx: tx=%#v,  tx.Hash=%#v, tx.index=%d\n",
 				transaction, transaction.Hash().String(), transaction.Index())
 		},
 
 		OnRedeemingTx: func(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-			log.Info("dclient: OnRedeemingTx: details=", details)
-			log.Info("dclient: OnRedeemingTx: tx.Hash=", transaction.Hash().String(), "tx.index=", transaction.Index())
+			log.Info("dclient: OnRedeemingTx", "details=", details)
+			log.Info("dclient: OnRedeemingTx", "tx.Hash=", transaction.Hash().String(), "tx.index=", transaction.Index())
 
 			if details != nil {
 				// do not block OnRedeemingTx callback
@@ -240,7 +244,7 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 		},
 
 		OnRelevantTxAccepted: func(transaction []byte) {
-			log.Info("dclient: OnRelevantTxAccepted: tx=", string(transaction))
+			log.Info("dclient: OnRelevantTxAccepted", "tx=", string(transaction))
 		},
 	}
 
@@ -248,7 +252,7 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 }
 
 func (anchorBTC *AnchorBTC) saveAnchorEntryInfo(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-	log.Info("in saveAnchorEntryInfo, anchor record count ", len(anchorBTC.toAnchorInfo))
+	log.Info("in saveAnchorEntryInfo, anchor record", "count ", len(anchorBTC.toAnchorInfo))
 	var saved = false
 	for _, anchorInfo := range anchorBTC.toAnchorInfo {
 		if strings.Compare(anchorInfo.Bitcoin.TXID, transaction.Hash().String()) == 0 {
@@ -414,18 +418,18 @@ func (anchorBTC *AnchorBTC) sendRawTransaction(msgtx *wire.MsgTx) (*chainhash.Ha
 		return nil, err
 	}
 
-	log.Debug("send transaction: ", spew.Sdump(msgtx))
+	log.Debug("tx", "send transaction: ", spew.Sdump(msgtx))
 	// use rpc client for btcd here for better callback info
 	// this should not require wallet to be unlocked
 	shaHash, err := anchorBTC.dclient.SendRawTransaction(msgtx, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed in rpcclient.SendRawTransaction: %s", err)
 	}
-	log.Info("btc txHash returned: ", shaHash) // new tx hash
+	log.Info("btc txHash returned: ", "hash ", shaHash) // new tx hash
 	return shaHash, nil
 }
 
-func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *common.Hash) {
+func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *common.Hash) error {
 	if len(anchorBTC.balances) == 0 {
 		log.Warn("len(balances) == 0, start rescan UTXO *** ")
 		anchorBTC.updateUTXO()
@@ -433,30 +437,31 @@ func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *com
 
 	if len(anchorBTC.balances) == 0 {
 		log.Warn("No balance in your wallet. No anchoring for now")
-		return
+		return errors.New("Error ")
 	}
 
 	b := anchorBTC.balances[0]
 	anchorBTC.balances = anchorBTC.balances[1:]
 	anchorBTC.defaultAddress = b.address
 
-	log.Info("new balances.len=", len(anchorBTC.balances))
+	log.Info("new balances", "len=", len(anchorBTC.balances))
 
 	msgtx, err := anchorBTC.createRawTransaction(b, hash.Bytes(), anchor.DBHeight)
 	if err != nil {
 		log.Error("cannot create Raw Transaction: ", err)
 		log.Error("Abort do this transaction: ", spew.Sdump(anchor))
-		return
+		return errors.New("Error")
 	}
 
 	shaHash, err := anchorBTC.sendRawTransaction(msgtx)
 	if err != nil {
 		log.Error("cannot send Raw Transaction: %s", err)
 		log.Error("Abort do this transaction: ", spew.Sdump(msgtx), " anchor ", spew.Sdump(anchor))
-		return
+		return errors.New("new error")
 	}
 	anchor.Bitcoin.TXID = shaHash.String()
 
-	log.Info("New anchor transaction for :", anchor.Bitcoin.TXID)
+	log.Info("New anchor transaction", "for ", anchor.Bitcoin.TXID)
 	anchorBTC.toAnchorInfo[anchor.KeyMR] = anchor
+	return nil
 }

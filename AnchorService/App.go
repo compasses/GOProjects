@@ -17,9 +17,10 @@ func main() {
 	app.Name = "AnchorService"
 
 	BlockMsg := make(chan common.DirectoryBlockAnchorInfo, 100)
+	AnchorFail := make(chan bool, 100)
 
 	app.Action = func(c *cli.Context) error {
-		service := anchor.NewAnchorService(BlockMsg)
+		service := anchor.NewAnchorService(BlockMsg, AnchorFail)
 		factomSync := anchor.NewFactomSync(service)
 		go service.Start()
 		//go factomSync.StartSync()
@@ -37,7 +38,7 @@ func main() {
 
 	go func() {
 		sig := <-sc
-		log.Info("Got signal", 0, "signal", sig)
+		log.Info("Got signal", "signal", sig)
 		log.Info("Shut down gracefully ...")
 		os.Exit(1)
 	}()

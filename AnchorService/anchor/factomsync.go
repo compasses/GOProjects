@@ -72,31 +72,24 @@ func (sync *FactomSync) SyncUp() error {
 	}
 	height := result.DirectoryBlockHeight
 	// start anchor the top 100
-	log.Info("Start sync up from height :", height)
+	log.Info("Start sync up ", " total height", height)
 
-	timeChan := time.NewTicker(time.Minute * 10).C
+	timeChan := time.NewTicker(time.Second * 10).C
 
-	// TODO Just for test remove this line
-	height = height - 100 //
-ForLoop:
+	height = height //
 	for {
 		select {
 		case <-timeChan:
 
 			dblock, err := sync.GetDBlockInfoByHeight(height)
 			if err != nil {
-				log.Error("Sync up error, check in next round", err)
+				log.Error("Sync up error, get new block error, just check in next round", "err", err)
 				continue
 			}
 
-			log.Info("Got dblockanchor info let's anchor it ", dblock)
+			log.Info("Got dblockanchor info let's anchor it ", "block ", dblock, " height", height)
 			sync.DirBlockMsg <- *dblock
 			height++
-
-			//if totoal == 100 {
-			//	log.Debug("let's break up for test")
-			break ForLoop
-			//}
 		}
 	}
 
@@ -125,7 +118,7 @@ func (sync *FactomSync) GetDBlockInfoByHeight(height int64) (*common.DirectoryBl
 	if err != nil {
 		return nil, fmt.Errorf("Unmarshal error ", err)
 	}
-	log.Debug("got dblock ", spew.Sdump(dblock))
+	log.Debug("got dblock ", "block ", spew.Sdump(dblock))
 
 	h, err := common.HexToHash(dblock.Dblock.KeyMR)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"errors"
 )
 
 type AnchorETH struct {
@@ -50,35 +51,36 @@ func (anchorETH *AnchorETH) PlaceAnchor(msg common.DirectoryBlockAnchorInfo) {
 	anchorRec.AnchorRecordVer = 1
 	anchorETH.count++
 
-	anchorETH.doTransaction(anchorRec)
+	if err := anchorETH.doTransaction(anchorRec); err != nil {
+		anchorETH.service.AnchorFail <- false
+	}
 }
 
-func (anchorETH *AnchorETH) doTransaction(record *anchor.AnchorRecord) {
+func (anchorETH *AnchorETH) doTransaction(record *anchor.AnchorRecord) error {
 	// unlock account
 	err := anchorETH.unlockAccount()
 	if err != nil {
 		log.Error("Cannot unlock account, cannot anchor now...")
-		return
+		return errors.New("Error")
 	}
 
 	// do transaction with data
 	txHashStr, err := anchorETH.sendTransaction(record)
 	if err != nil {
 		log.Error("Send transaction error ", err)
-		return
+		return errors.New("Error")
 	}
 
-	log.Info("Got transaction hash ", *txHashStr)
+	log.Info("Got transaction", "hash ", *txHashStr)
 	timeChan := time.NewTicker(time.Minute).C
 	totalTry := 60
-
 	// wait confirm to save anchor into factom
 ForLoop:
 	for {
 		select {
 		case <-timeChan:
 			totalTry--
-			if totalTry < 0 {
+			if totalTry <= 0 {
 				break ForLoop
 			}
 
@@ -87,13 +89,18 @@ ForLoop:
 				log.Info("error happen ", err, " retry , total try left ", totalTry)
 				continue
 			}
-			log.Debug("Got receipt ", spew.Sdump(receipt))
+			log.Debug("Got receipt ", "info", spew.Sdump(receipt))
 
 			anchorETH.saveAnchor(receipt, record)
 			break ForLoop
 		}
 	}
 
+
+	if totalTry <= 0 {
+		return errors.New("Error")
+	}
+	return nil
 }
 
 func (eth *AnchorETH) saveAnchor(receipt *common.EthTxReceipt, record *anchor.AnchorRecord) {
@@ -107,7 +114,7 @@ func (eth *AnchorETH) saveAnchor(receipt *common.EthTxReceipt, record *anchor.An
 }
 
 func (eth *AnchorETH) getTransactionReceipt(txHashStr string) (*common.EthTxReceipt, error) {
-	log.Info("got receipt hashstr ", txHashStr)
+	log.Info("got receipt hashstr ", "str", txHashStr)
 	receiptJson := util.NewJSON2Request("eth_getTransactionReceipt", 1, []interface{}{txHashStr})
 
 	receiptReq, err := util.EncodeJSON(receiptJson)
@@ -115,7 +122,7 @@ func (eth *AnchorETH) getTransactionReceipt(txHashStr string) (*common.EthTxRece
 		return nil, err
 	}
 
-	log.Debug("Receipt get ", spew.Sdump(receiptJson))
+	log.Debug("receipt", "Receipt get ", spew.Sdump(receiptJson))
 
 	httpReq, err := http.NewRequest("POST", fmt.Sprintf("http://%s", eth.ethHost), bytes.NewBuffer(receiptReq))
 	if err != nil {
@@ -136,7 +143,7 @@ func (eth *AnchorETH) getTransactionReceipt(txHashStr string) (*common.EthTxRece
 		return nil, fmt.Errorf("Error on http request parse body %s", err)
 	}
 
-	log.Debug("Receipt get result ", spew.Sdump(r))
+	log.Debug("Receipt get result ", "result", spew.Sdump(r))
 
 	if r.Error != nil {
 		return nil, fmt.Errorf("Receipt call error...%s", r.Error.Message)
@@ -165,7 +172,7 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 		return nil, err
 	}
 	hexs := "0x" + hex.EncodeToString(data)
-	log.Info("got hex string ", hexs)
+	log.Info("got hex string ", "info", hexs)
 
 	txreqJson := util.NewJSON2Request("eth_sendTransaction", 1, []interface{}{
 		map[string]interface{}{
@@ -182,7 +189,7 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 		return nil, fmt.Errorf(" encode error %s", err)
 	}
 
-	log.Debug("Send transaction dump ", spew.Sdump(txreqJson))
+	log.Debug("Send transaction dump ", "dump", spew.Sdump(txreqJson))
 	httpReq, err := http.NewRequest("POST", fmt.Sprintf("http://%s", eth.ethHost), bytes.NewBuffer(txreq))
 	if err != nil {
 		return nil, fmt.Errorf("Http New Request error %s", err)
@@ -202,7 +209,7 @@ func (eth *AnchorETH) sendTransaction(record *anchor.AnchorRecord) (*string, err
 		return nil, fmt.Errorf("Error on http request parse body %s", err)
 	}
 
-	log.Debug("Got send transaction result ", spew.Sdump(r))
+	log.Debug("Got send transaction result ", "result", spew.Sdump(r))
 
 	var result string
 
