@@ -13,9 +13,9 @@ import (
 	"github.com/FactomProject/factomd/common/primitives"
 	"io/ioutil"
 	"net/http"
-	"time"
 	"os"
 	"syscall"
+	"time"
 )
 
 var log = util.AnchorLogger
@@ -66,7 +66,7 @@ func NewAnchorService(DirBlockMsg chan common.DirectoryBlockAnchorInfo, AnchorFa
 		btc := NewAnchorBTC()
 		err := btc.InitRPCClient()
 		if err != nil {
-			log.Crit("Error on init RPC :","error", err)
+			log.Crit("Error on init RPC :", "error", err)
 		}
 
 		service.DoAnchor = btc
@@ -96,12 +96,12 @@ func (service *AnchorService) Start() {
 		case anchorMsg := <-service.DirBlockMsg:
 			log.Info("Got anchor msg: ", "msg", anchorMsg)
 			go service.DoAnchor.PlaceAnchor(anchorMsg)
-		case _ = <- service.AnchorFail:
+		case _ = <-service.AnchorFail:
 			failedTime++
 			log.Error("anchor failed", "time", failedTime)
 			if failedTime >= 10 {
 				log.Error("more than 10 times fail to anchor, just quit job")
-				p, _:= os.FindProcess(os.Getpid())
+				p, _ := os.FindProcess(os.Getpid())
 				p.Signal(syscall.SIGQUIT)
 			}
 		}

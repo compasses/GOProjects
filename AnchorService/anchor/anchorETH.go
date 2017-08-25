@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/FactomProject/factomd/anchor"
 	"github.com/FactomProject/go-spew/spew"
@@ -13,7 +14,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"errors"
 )
 
 type AnchorETH struct {
@@ -86,7 +86,7 @@ ForLoop:
 
 			receipt, err := anchorETH.getTransactionReceipt(*txHashStr)
 			if err != nil {
-				log.Info("error happen ", err, " retry , total try left ", totalTry)
+				log.Info("error happen ", "got error", err, "total try left ", totalTry)
 				continue
 			}
 			log.Debug("Got receipt ", "info", spew.Sdump(receipt))
@@ -95,7 +95,6 @@ ForLoop:
 			break ForLoop
 		}
 	}
-
 
 	if totalTry <= 0 {
 		return errors.New("Error")

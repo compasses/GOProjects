@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/FactomProject/factomd/anchor"
 	"github.com/btcsuite/btcd/btcjson"
@@ -20,7 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"errors"
 )
 
 type balance struct {
@@ -77,7 +77,7 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 	// Connect to local btcwallet RPC server using websockets.
 	ntfnHandlers := anchorBTC.createBtcwalletNotificationHandlers()
 	certHomeDir := btcutil.AppDataDir(certHomePath, false)
-	log.Debug("btcwallet.cert.home=", "dir ", certHomeDir)
+	log.Debug("homeinfo", "dir ", certHomeDir)
 	certs, err := ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
 	if err != nil {
 		return fmt.Errorf("cannot read rpc.cert file: %s\n", err)
@@ -101,7 +101,7 @@ func (anchorBTC *AnchorBTC) InitRPCClient() error {
 	// Connect to local btcd RPC server using websockets.
 	dntfnHandlers := anchorBTC.createBtcdNotificationHandlers()
 	certHomeDir = btcutil.AppDataDir(certHomePathBtcd, false)
-	log.Debug("btcd.cert.home=", "dir ", certHomeDir)
+	log.Debug("homeinfo", "dir ", certHomeDir)
 	certs, err = ioutil.ReadFile(filepath.Join(certHomeDir, "rpc.cert"))
 	if err != nil {
 		return fmt.Errorf("cannot read rpc.cert file for btcd rpc server: %s\n", err)
@@ -209,7 +209,7 @@ func (anchorBTC *AnchorBTC) createBtcwalletNotificationHandlers() btcrpcclient.N
 		},
 
 		OnUnknownNotification: func(method string, params []json.RawMessage) {
-			log.Info("wclient: OnUnknownNotification","method=", method, "\nparams[0]=",
+			log.Info("wclient: OnUnknownNotification", "method=", method, "\nparams[0]=",
 				string(params[0]), "\nparam[1]=", string(params[1]))
 		},
 	}
@@ -222,12 +222,12 @@ func (anchorBTC *AnchorBTC) createBtcdNotificationHandlers() btcrpcclient.Notifi
 	ntfnHandlers := btcrpcclient.NotificationHandlers{
 
 		OnBlockConnected: func(hash *chainhash.Hash, height int32, t time.Time) {
-			log.Info("dclient: OnBlockConnected"," hash=", hash, ", height=", height, ", time=", t)
+			log.Info("dclient: OnBlockConnected", " hash=", hash, ", height=", height, ", time=", t)
 			//go newBlock(hash, height)	// no need
 		},
 
 		OnRecvTx: func(transaction *btcutil.Tx, details *btcjson.BlockDetails) {
-			log.Info("dclient: OnRecvTx","details=%#v\n", details)
+			log.Info("dclient: OnRecvTx", "details=%#v\n", details)
 			log.Info("dclient: OnRecvTx: tx=%#v,  tx.Hash=%#v, tx.index=%d\n",
 				transaction, transaction.Hash().String(), transaction.Index())
 		},

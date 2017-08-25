@@ -2,6 +2,7 @@ package anchor
 
 import (
 	"AnchorService/common"
+	"AnchorService/util"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"time"
 )
+
+var flog = util.FactomLooger
 
 type FactomSync struct {
 	factomserver string
@@ -38,10 +41,10 @@ func (sync *FactomSync) StartSync() {
 	for {
 		select {
 		case <-timeChan:
-			log.Info("Got new block info, anchor it...")
+			flog.Info("Got new block info, anchor it...")
 			h, err := common.HexToHash("32ce948a6e45cb7e5d098b7c53fe0f60fda14667ac9457bdbafcea04b673918d")
 			if err != nil {
-				log.Info("hash error ", err)
+				flog.Info("hash error ", err)
 				continue
 			}
 			info := common.DirectoryBlockAnchorInfo{
@@ -50,7 +53,6 @@ func (sync *FactomSync) StartSync() {
 			}
 
 			sync.DirBlockMsg <- info
-
 		}
 	}
 
@@ -61,20 +63,23 @@ func (sync *FactomSync) SyncUp() error {
 	heightReq := factom.NewJSON2Request("heights", 0, nil)
 	heightResp, err := DoFactomReq(heightReq, sync.factomserver)
 	if err != nil {
-		log.Error("call get hegiht error, no need sync up now")
+		flog.Error("call get hegiht error, no need sync up now")
 		return fmt.Errorf("error %s", err)
 	}
 	var result factom.HeightsResponse
 	err = json.Unmarshal(heightResp.Result, &result)
 	if err != nil {
-		log.Error("Unmarshal error no need sync up now")
+		flog.Error("Unmarshal error no need sync up now")
 		return fmt.Errorf("error %s", err)
 	}
 	height := result.DirectoryBlockHeight
 	// start anchor the top 100
-	log.Info("Start sync up ", " total height", height)
+	flog.Info("Start sync up ", " total height", height)
+	cfg := util.ReadConfig()
+	interval := time.Duration(cfg.Anchor.Interval) * time.Minute
+	flog.Info("Sync interval", "interval ", interval)
 
-	timeChan := time.NewTicker(time.Second * 10).C
+	timeChan := time.NewTicker(interval).C
 
 	height = height //
 	for {
@@ -83,11 +88,11 @@ func (sync *FactomSync) SyncUp() error {
 
 			dblock, err := sync.GetDBlockInfoByHeight(height)
 			if err != nil {
-				log.Error("Sync up error, get new block error, just check in next round", "err", err)
+				flog.Error("Sync up error, get new block error, just check in next round", "err", err)
 				continue
 			}
 
-			log.Info("Got dblockanchor info let's anchor it ", "block ", dblock, " height", height)
+			flog.Info("Got dblockanchor info let's anchor it ", "block ", dblock, " height", height)
 			sync.DirBlockMsg <- *dblock
 			height++
 		}
@@ -118,7 +123,7 @@ func (sync *FactomSync) GetDBlockInfoByHeight(height int64) (*common.DirectoryBl
 	if err != nil {
 		return nil, fmt.Errorf("Unmarshal error ", err)
 	}
-	log.Debug("got dblock ", "block ", spew.Sdump(dblock))
+	flog.Debug("got dblock ", "block ", spew.Sdump(dblock))
 
 	h, err := common.HexToHash(dblock.Dblock.KeyMR)
 	if err != nil {

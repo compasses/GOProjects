@@ -5,10 +5,9 @@ import (
 	"os"
 )
 
-var ContextLogger log.Logger
 var MainLogger log.Logger
-var CommonLogger log.Logger
 var AnchorLogger log.Logger
+var FactomLooger log.Logger
 
 func init() {
 	cfg := ReadConfig()
@@ -17,22 +16,20 @@ func init() {
 
 	if GetLogLevel(cfg) == log.LvlDebug {
 		handler = log.MultiHandler(
-			log.StreamHandler(os.Stdout, log.LogfmtFormat()),
+			log.StreamHandler(os.Stdout, CustomFormat()),
 		)
-
 		log.Root().SetHandler(log.CallerFileHandler(handler))
 	} else {
 		handler = log.MultiHandler(
-			log.Must.FileHandler(logFile, log.LogfmtFormat()),
+			log.Must.FileHandler(logFile, CustomFormat()),
 		)
-		log.Root().SetHandler(handler)
+
+		log.Root().SetHandler(log.LvlFilterHandler(GetLogLevel(cfg), handler))
 	}
 
-	ContextLogger = log.New("common", "anchorservice")
-
 	MainLogger = log.New("module", "main")
-	CommonLogger = log.New("module", "common")
 	AnchorLogger = log.New("module", "anchor")
+	FactomLooger = log.New("module", "factom")
 }
 
 func GetLogLevel(cfg *AnchorServiceCfg) log.Lvl {
