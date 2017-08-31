@@ -1,7 +1,7 @@
 package util_test
 
 import (
-	"github.com/compasses/GOProjects/AnchorService/util"
+	"AnchorService/util"
 	"gopkg.in/gcfg.v1"
 	"testing"
 )

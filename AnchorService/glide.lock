@@ -1,5 +1,5 @@
-hash: 9e31ceeab150633e1e258f026b1d51f086a0df8953f254643ed561a6871a45f1
-updated: 2017-08-18T15:02:38.256838044+08:00
+hash: 1ff3691237e356b35160665468a237c5c6a9b979db72167dd1710a651d5df1c8
+updated: 2017-08-29T10:46:19.676537286+08:00
 imports:
 - name: github.com/btcsuite/btcd
   version: a6965d493fdfb833b6b3a83c3958ab18968fe24e
@@ -45,9 +45,9 @@ imports:
   subpackages:
   - edwards25519
 - name: github.com/FactomProject/factom
-  version: 90877e81c883927569a408d2e2c93d423e766a5d
+  version: b39ad1979fedecb35e7442c9c06a84c3a1055ad3
 - name: github.com/FactomProject/factomd
-  version: 65d0bfa0628fad000a6cc28e1f3dd3622900ebe6
+  version: d1e672cf525f99dc993c78b5b0f28dfe219bf8ad
   subpackages:
   - anchor
   - common/constants
@@ -66,8 +66,6 @@ imports:
   version: ddfaec9b42f58fc8172b0cbb03b21c6668dd0a46
   subpackages:
   - spew
-- name: github.com/FactomProject/logrus
-  version: 202f25545ea4cf9b191ff7f846df5d87c9382c2b
 - name: github.com/FactomProject/netki-go-partner-client
   version: 426acb535e66cc2f9e6226ae254555e3572fd142
 - name: github.com/go-stack/stack
@@ -81,17 +79,17 @@ imports:
 - name: github.com/mattn/go-isatty
   version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
 - name: github.com/sirupsen/logrus
-  version: 68806b4b77355d6c8577a2c8bbc6d547a5272491
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/urfave/cli
   version: f017f86fccc5a039a98f23311f34fdf78b014f78
 - name: golang.org/x/crypto
-  version: adbae1b6b6fb4b02448a0fc0dbbc9ba2b95b294d
+  version: bed12803fa9663d7aa2c2346b0c634ad2dcd43b7
   subpackages:
   - pbkdf2
   - ripemd160
   - ssh/terminal
 - name: golang.org/x/sys
-  version: fb4cac33e3196ff7f507ab9b2d2a44b0142f5b5a
+  version: 7a6e5648d140666db5d920909e082ca00a87ba2c
   subpackages:
   - unix
 - name: gopkg.in/gcfg.v1
@@ -103,10 +101,6 @@ imports:
 - name: gopkg.in/warnings.v0
   version: 8a331561fe74dadba6edfc59f3be66c22c3b065d
 testImports:
-- name: github.com/compasses/GOProjects
-  version: ca377d9ae15832c5e1f136676f80287444a62614
-  subpackages:
-  - AnchorService/util
 - name: github.com/FactomProject/bolt
   version: 952a1b4e9a55f458d536cf703bce25a4e9c99841
 - name: github.com/FactomProject/dynrsrc

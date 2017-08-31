@@ -186,8 +186,9 @@ func (anchorBTC *AnchorBTC) updateUTXO() error {
 		if err != nil {
 			return fmt.Errorf("cannot get WIF: %s", err)
 		}
+
 		anchorBTC.balances[i].wif = wif
-		log.Debug("balance \n", i, spew.Sdump(anchorBTC.balances[i]))
+		log.Debug("balance info ", i, spew.Sdump(anchorBTC.balances[i]))
 	}
 
 	//time.Sleep(1 * time.Second)
@@ -455,7 +456,7 @@ func (anchorBTC *AnchorBTC) doTransaction(anchor *anchor.AnchorRecord, hash *com
 
 	shaHash, err := anchorBTC.sendRawTransaction(msgtx)
 	if err != nil {
-		log.Error("cannot send Raw Transaction: %s", err)
+		log.Error("cannot send Raw Transaction", "error info ", err)
 		log.Error("Abort do this transaction: ", spew.Sdump(msgtx), " anchor ", spew.Sdump(anchor))
 		return errors.New("new error")
 	}

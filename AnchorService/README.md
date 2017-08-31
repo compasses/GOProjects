@@ -46,7 +46,16 @@ use the default configuation file, change as need, just run ./anchorservice
     git clone https://github.com/golang/net/
     git clone https://github.com/golang/crypto/
 ```
+
 3. glide install
 
+### Anchor encode data structure
+
+```
+The hash of the directory block is placed in an op_return 
+the first 2 bytes are ASCII Fa
+the next 6 bytes are the directory block height.
+the next 32 bytes are the KeyMR  of the directory block at that height
+```
 
     

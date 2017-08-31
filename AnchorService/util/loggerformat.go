@@ -95,7 +95,7 @@ func logfmt(buf *bytes.Buffer, ctx []interface{}) {
 		k, ok := ctx[i].(string)
 		v := formatLogfmtValue(ctx[i+1])
 		if !ok {
-			k, v = "log", formatLogfmtValue(k)
+			k = formatLogfmtValue(k)
 		}
 
 		if k == moduleKey || k == sessionKey {

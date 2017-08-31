@@ -79,14 +79,37 @@ func (sync *FactomSync) SyncUp() error {
 	interval := time.Duration(cfg.Anchor.Interval) * time.Minute
 	flog.Info("Sync interval", "interval ", interval)
 
-	timeChan := time.NewTicker(interval).C
+	flog.Info(fmt.Sprintf("Check anchor info before height %d", height))
+	for i := int64(1); i < height; i++ {
+		dblockInfo, err := sync.GetDBlockInfoByHeight(i)
 
-	height = height //
+		if err == nil {
+			confirm := dblockInfo["BTCConfirmed"].(bool)
+			if confirm == true {
+				flog.Info("height anchored, just passs", " height ", i)
+				continue
+			}
+		}
+
+		// not found
+		flog.Info("This block not anchored, do redo anchor ", " height ", i)
+
+		dblock, err := sync.GetDBlockByHeight(i)
+		if err != nil {
+			flog.Error("check anchor get block error, go to next ", "err", err)
+			continue
+		}
+		flog.Info("Got dblockanchor info let's anchor it ", "block ", dblock, " height", i)
+		sync.DirBlockMsg <- *dblock
+		time.Sleep(time.Second)
+	}
+
+	flog.Info("Check anchor end, now start normal anchor process ", " start height ", height)
+	timeChan := time.NewTicker(interval).C
 	for {
 		select {
 		case <-timeChan:
-
-			dblock, err := sync.GetDBlockInfoByHeight(height)
+			dblock, err := sync.GetDBlockByHeight(height)
 			if err != nil {
 				flog.Error("Sync up error, get new block error, just check in next round", "err", err)
 				continue
@@ -102,7 +125,30 @@ func (sync *FactomSync) SyncUp() error {
 
 }
 
-func (sync *FactomSync) GetDBlockInfoByHeight(height int64) (*common.DirectoryBlockAnchorInfo, error) {
+func (sync *FactomSync) GetDBlockInfoByHeight(height int64) (map[string]interface{}, error) {
+	params := struct {
+		Height int64 `json:"height"`
+	}{
+		Height: height,
+	}
+
+	req := factom.NewJSON2Request("directory-blockinfo-by-height", 0, params)
+	resp, err := DoFactomReq(req, sync.factomserver)
+	if resp.Error != nil {
+		return nil, fmt.Errorf("directory-blockinfo-by-height error happen %s", resp.Error.Message)
+	}
+
+	var result map[string]interface{}
+
+	err = json.Unmarshal(resp.Result, &result)
+	if err != nil {
+		return nil, fmt.Errorf("Unmarshal error ", err)
+	}
+
+	return result, nil
+}
+
+func (sync *FactomSync) GetDBlockByHeight(height int64) (*common.DirectoryBlockAnchorInfo, error) {
 	params := struct {
 		Height int64 `json:"height"`
 	}{
